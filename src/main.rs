@@ -43,6 +43,7 @@ struct Parameters {
     warps: u32,
     warp_strength: f32,
     octaves: u32,
+    time_scale: f32,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
@@ -126,6 +127,7 @@ impl MyApp {
                 warps: 0,
                 warp_strength: 4.0,
                 octaves: 1,
+                time_scale: 1.0,
             },
         }
     }
@@ -164,7 +166,7 @@ impl eframe::App for MyApp {
                             get_axis(Key::S, Key::W) + get_axis(Key::ArrowDown, Key::ArrowUp),
                         );
 
-                    self.parameters.time = input.time as f32;
+                    self.parameters.time += self.parameters.time_scale * input.stable_dt;
                 });
 
                 ui.painter().add(egui_wgpu::Callback::new_paint_callback(
@@ -209,6 +211,17 @@ impl eframe::App for MyApp {
                                 }
                             }
                         });
+
+                        ui.separator();
+
+                        ui.horizontal(|ui| {
+                            ui.label("Time Scale");
+                            ui.add(
+                                egui::DragValue::new(&mut self.parameters.time_scale).speed(0.01),
+                            );
+                        });
+
+                        ui.separator();
 
                         ui.horizontal(|ui| {
                             ui.label("Octaves");
