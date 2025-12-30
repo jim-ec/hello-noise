@@ -150,7 +150,11 @@ impl eframe::App for MyApp {
                         }
                     });
 
-                    f32_ui(ui, "Zoom", &mut self.parameters.zoom);
+                    ui.horizontal(|ui| {
+                        ui.label("Zoom");
+                        ui.add(egui::DragValue::new(&mut self.parameters.zoom).speed(0.01));
+                        ui.label(format!("(x{:.2e})", self.parameters.zoom.exp()));
+                    });
 
                     ui.horizontal(|ui| {
                         ui.label("Pan");
@@ -167,13 +171,6 @@ impl eframe::App for MyApp {
                 })
             });
     }
-}
-
-fn f32_ui(ui: &mut egui::Ui, label: impl Into<egui::WidgetText>, x: &mut f32) {
-    ui.horizontal(|ui| {
-        ui.label(label);
-        ui.add(egui::DragValue::new(x).speed(0.01));
-    });
 }
 
 #[derive(Debug, Copy, Clone)]

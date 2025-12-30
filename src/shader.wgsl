@@ -124,10 +124,33 @@ fn value_noise(p: vec2<f32>) -> f32 {
     return nxy;
 }
 
-/// Returns random values in [-1, 1).
-fn rand(p: vec2<f32>) -> f32 {
-    const SEED: f32 = 42.0;
-    let input = p + vec2(SEED);
-    let unit = fract(sin(dot(input, vec2(12.9898, 78.233))) * 43758.5453123);
-    return unit * 2.0 - 1.0;
+fn rand(v: vec2<f32>) -> f32 {
+    return randi(vec2<i32>(v));
+}
+
+fn randi(v: vec2<i32>) -> f32 {
+    let x = bitcast<u32>(v.x);
+    let y = bitcast<u32>(v.y);
+
+    let seed = x ^ (y * 0x9E3779B9u);
+
+    let hash = hash_murmur(bitcast<u32>(seed));
+
+    return u32_to_unit_f32(hash) * 2.0 - 1.0;
+}
+
+fn u32_to_unit_f32(x: u32) -> f32 {
+    let mantissa = x & 0x007FFFFFu;
+    let one_point = mantissa | 0x3F800000u;
+    return bitcast<f32>(one_point) - 1.0;
+}
+
+fn hash_murmur(x: u32) -> u32 {
+    var h = x;
+    h ^= h >> 16;
+    h *= 0x85ebca6bu;
+    h ^= h >> 13;
+    h *= 0xc2b2ae35u;
+    h ^= h >> 16;
+    return h;
 }
