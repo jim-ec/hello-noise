@@ -8,6 +8,8 @@ struct Parameters {
     warp: u32,
     warp_strength: f32,
     octaves: u32,
+    levels: u32,
+    saturation: f32,
 }
 
 var<push_constant> parameters: Parameters;
@@ -46,8 +48,27 @@ fn vertex(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;
     let noise = warped_noise(uv);
-    let color = color(noise, uv);
+
+    var color = color(noise, uv);
+    color = quantize_color(color);
+    color = saturate_color(color);
+
     return vec4(pow(color, vec3(2.2)), 1.0);
+}
+
+fn quantize_color(color: vec3<f32>) -> vec3<f32> {
+    return select(
+        color,
+        trunc(color * f32(parameters.levels)) / f32(parameters.levels),
+        parameters.levels > 0,
+    );
+}
+
+fn saturate_color(color: vec3<f32>) -> vec3<f32> {
+    let k = parameters.saturation;
+    let lower = 0.5 * pow(2.0 * color, vec3(k));
+    let upper = 1.0 - 0.5 * pow(2.0 * (1.0 - color), vec3(k));
+    return select(upper, lower, color < vec3(0.5));
 }
 
 fn color(noise: f32, uv: vec2<f32>) -> vec3<f32> {

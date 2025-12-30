@@ -44,6 +44,9 @@ struct Parameters {
     warp_strength: f32,
     octaves: u32,
     time_scale: f32,
+    quantize: bool,
+    levels: u32,
+    saturation: f32,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
@@ -128,6 +131,9 @@ impl MyApp {
                 warp_strength: 4.0,
                 octaves: 1,
                 time_scale: 1.0,
+                quantize: false,
+                levels: 16,
+                saturation: 1.0,
             },
         }
     }
@@ -246,6 +252,24 @@ impl eframe::App for MyApp {
                         ui.separator();
 
                         ui.horizontal(|ui| {
+                            ui.label("Quantize");
+                            ui.checkbox(&mut self.parameters.quantize, ());
+                            if !self.parameters.quantize {
+                                ui.disable();
+                            }
+                            ui.add(egui::DragValue::new(&mut self.parameters.levels).speed(0.1));
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Saturation");
+                            ui.add(
+                                egui::DragValue::new(&mut self.parameters.saturation).speed(0.01),
+                            );
+                        });
+
+                        ui.separator();
+
+                        ui.horizontal(|ui| {
                             ui.label("Zoom");
                             ui.add(egui::DragValue::new(&mut self.parameters.zoom).speed(0.01));
                             ui.label(format!("(x{:.2e})", self.parameters.zoom.exp()));
@@ -285,6 +309,8 @@ pub struct PushConstants {
     warps: u32,
     warp_strength: f32,
     octaves: u32,
+    levels: u32,
+    saturation: f32,
 }
 
 impl egui_wgpu::CallbackTrait for Parameters {
@@ -320,6 +346,8 @@ impl egui_wgpu::CallbackTrait for Parameters {
                 warps: self.warps,
                 warp_strength: self.warp_strength,
                 octaves: self.octaves,
+                levels: if self.quantize { self.levels } else { 0 },
+                saturation: self.saturation,
             }]),
         );
         pass.draw(0..3, 0..1);
