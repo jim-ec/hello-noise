@@ -13,6 +13,14 @@ pub struct Renderer {
     uniform_buffer: Buffer,
 }
 
+#[derive(Debug, Copy, Clone)]
+#[allow(dead_code)]
+#[repr(C)]
+pub struct Uniforms {
+    aspect_ratio: f32,
+    time: f32,
+}
+
 impl Renderer {
     pub async fn new(window: Arc<Window>) -> Self {
         let instance = Instance::new(&InstanceDescriptor::default());
@@ -70,7 +78,7 @@ impl Renderer {
                         label: None,
                         entries: &[BindGroupLayoutEntry {
                             binding: 0,
-                            visibility: ShaderStages::FRAGMENT,
+                            visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                             ty: BindingType::Buffer {
                                 ty: BufferBindingType::Uniform,
                                 has_dynamic_offset: false,
@@ -114,14 +122,20 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, t: f32) {
+    pub fn render(&mut self, time: f32) {
         let surface_texture = self.surface.get_current_texture().unwrap();
         let surface_texture_view = surface_texture
             .texture
             .create_view(&TextureViewDescriptor::default());
 
-        self.queue
-            .write_buffer(&self.uniform_buffer, 0, as_byte_slice(&[Uniforms { t }]));
+        self.queue.write_buffer(
+            &self.uniform_buffer,
+            0,
+            as_byte_slice(&[Uniforms {
+                time,
+                aspect_ratio: self.config.width as f32 / self.config.height as f32,
+            }]),
+        );
 
         let mut encoder = self.device.create_command_encoder(&Default::default());
 
@@ -166,13 +180,6 @@ impl Renderer {
         self.config.height = size.height;
         self.surface.configure(&self.device, &self.config);
     }
-}
-
-#[derive(Debug, Copy, Clone)]
-#[allow(dead_code)]
-#[repr(C)]
-pub struct Uniforms {
-    t: f32,
 }
 
 fn as_byte_slice<T>(slice: &[T]) -> &[u8] {
