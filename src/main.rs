@@ -43,6 +43,8 @@ struct Parameters {
     warps: u32,
     warp_strength: f32,
     octaves: u32,
+    lacunarity: f32,
+    persistence: f32,
     time_scale: f32,
     quantize: bool,
     dither: bool,
@@ -131,6 +133,8 @@ impl MyApp {
                 warps: 0,
                 warp_strength: 4.0,
                 octaves: 1,
+                lacunarity: 2.0,
+                persistence: 0.5,
                 time_scale: 1.0,
                 quantize: false,
                 levels: 16,
@@ -241,6 +245,24 @@ impl eframe::App for MyApp {
                         });
 
                         ui.horizontal(|ui| {
+                            ui.label("Lacunarity");
+                            ui.add(
+                                egui::DragValue::new(&mut self.parameters.lacunarity)
+                                    .speed(0.01)
+                                    .range(0.1..=16.0),
+                            );
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Persistence");
+                            ui.add(
+                                egui::DragValue::new(&mut self.parameters.persistence)
+                                    .speed(0.01)
+                                    .range(0.1..=16.0),
+                            );
+                        });
+
+                        ui.horizontal(|ui| {
                             ui.label("Warp");
                             ui.add(egui::DragValue::new(&mut self.parameters.warps).speed(0.05));
                             ui.label("Strength");
@@ -319,6 +341,8 @@ pub struct PushConstants {
     warps: u32,
     warp_strength: f32,
     octaves: u32,
+    lacunarity: f32,
+    persistence: f32,
     levels: u32,
     saturation: f32,
     dither: u32,
@@ -357,6 +381,8 @@ impl egui_wgpu::CallbackTrait for Parameters {
                 warps: self.warps,
                 warp_strength: self.warp_strength,
                 octaves: self.octaves,
+                lacunarity: self.lacunarity,
+                persistence: self.persistence,
                 levels: if self.quantize { self.levels } else { 0 },
                 saturation: self.saturation,
                 dither: self.dither as u32,

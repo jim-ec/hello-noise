@@ -8,6 +8,8 @@ struct Parameters {
     warp: u32,
     warp_strength: f32,
     octaves: u32,
+    lacunarity: f32,
+    persistence: f32,
     levels: u32,
     saturation: f32,
     dither: u32,
@@ -97,9 +99,6 @@ fn warped_noise(p: vec2<f32>) -> f32 {
 }
 
 fn fbm(p: vec2<f32>) -> f32 {
-    const LACUNARITY: f32 = 2.0;
-    const PERSISTENCE: f32 = 0.5;
-
     var n = 0.0;
 
     var amplitude = 0.5;
@@ -109,9 +108,9 @@ fn fbm(p: vec2<f32>) -> f32 {
 
     for (var i = 0u; i < parameters.octaves; i++) {
         n += amplitude * noise(q);
-        q *= LACUNARITY;
-        amplitude *= PERSISTENCE;
-        frequency *= LACUNARITY;
+        q *= parameters.lacunarity;
+        amplitude *= parameters.persistence;
+        frequency *= parameters.lacunarity;
     }
 
     return n;
@@ -360,7 +359,7 @@ fn worley_noise_2d(p: vec2<f32>) -> f32 {
     let i = floor(p);
     let f = fract(p);
 
-    let d_max = sqrt(2.0);
+    let d_max = 2.0;
     var d_min = d_max;
 
     for (var y = -1; y <= 1; y++) {
@@ -368,19 +367,19 @@ fn worley_noise_2d(p: vec2<f32>) -> f32 {
             let neighbor = vec2<f32>(f32(x), f32(y));
             let cell_id = i + neighbor;
             let point_local = rand_vec2(cell_id) * 0.5 + 0.5;
-            let d = length(neighbor + point_local - f);
-            d_min = min(d_min, d);
+            let diff = neighbor + point_local - f;
+            d_min = min(d_min, dot(diff, diff));
         }
     }
 
-    return d_min / d_max;
+    return sqrt(d_min) / sqrt(d_max);
 }
 
 fn worley_noise_3d(p: vec3<f32>) -> f32 {
     let i = floor(p);
     let f = fract(p);
 
-    let d_max = sqrt(3.0);
+    let d_max = 3.0;
     var d_min = d_max;
 
     for (var z = -1; z <= 1; z++) {
@@ -389,13 +388,13 @@ fn worley_noise_3d(p: vec3<f32>) -> f32 {
                 let neighbor = vec3<f32>(f32(x), f32(y), f32(z));
                 let cell_id = i + neighbor;
                 let point_local = rand_vec3(cell_id) * 0.5 + 0.5;
-                let d = length(neighbor + point_local - f);
-                d_min = min(d_min, d);
+                let diff = neighbor + point_local - f;
+                d_min = min(d_min, dot(diff, diff));
             }
         }
     }
 
-    return d_min / d_max;
+    return sqrt(d_min) / sqrt(d_max);
 }
 
 fn rand_vec2(p: vec2<f32>) -> vec2<f32> {
