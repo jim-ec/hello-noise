@@ -1,14 +1,11 @@
-mod camera;
 mod render;
 
-use std::{cell::OnceCell, collections::HashSet, sync::Arc, time::Instant};
+use std::{cell::OnceCell, sync::Arc, time::Instant};
 
-use camera::Camera;
-use glam::{Mat2, Vec2, Vec3};
 use render::Renderer;
 use winit::{
     application::ApplicationHandler,
-    event::{DeviceEvent, ElementState, KeyEvent, MouseButton, MouseScrollDelta, WindowEvent},
+    event::{KeyEvent, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoop},
     keyboard::{KeyCode, PhysicalKey},
     window::{Window, WindowId},
@@ -18,11 +15,7 @@ use winit::{
 struct App {
     window: OnceCell<Arc<Window>>,
     renderer: OnceCell<Renderer>,
-    camera_smoothed: Camera,
-    camera: Camera,
-    last_render_time: Option<Instant>,
-    dragging: Option<MouseButton>,
-    pressed_keys: HashSet<KeyCode>,
+    start_time: OnceCell<Instant>,
 }
 
 impl ApplicationHandler for App {
@@ -53,107 +46,21 @@ impl ApplicationHandler for App {
             }
 
             WindowEvent::RedrawRequested => {
-                let now = Instant::now();
-                match self.last_render_time {
-                    None => {
-                        self.camera_smoothed = self.camera;
-                    }
-                    Some(t) => {
-                        let dt = (now - t).as_secs_f32();
-
-                        let mut translation = Vec3::ZERO;
-
-                        for (code, anti_code, axis) in [
-                            (KeyCode::KeyD, KeyCode::KeyA, Vec2::X),
-                            (KeyCode::KeyS, KeyCode::KeyW, Vec2::Y),
-                        ] {
-                            let step = self.pressed_keys.contains(&code) as i32
-                                - self.pressed_keys.contains(&anti_code) as i32;
-
-                            let step = dt * step as f32 * axis;
-
-                            let step = Mat2::from_angle(-self.camera.yaw) * step;
-
-                            translation.x += step.x;
-                            translation.z += step.y;
-                        }
-
-                        for (code, anti_code, axis) in [(KeyCode::KeyQ, KeyCode::KeyE, Vec3::Y)] {
-                            let step = self.pressed_keys.contains(&code) as i32
-                                - self.pressed_keys.contains(&anti_code) as i32;
-                            translation += step as f32 * axis;
-                        }
-
-                        translation = translation.normalize_or_zero();
-
-                        if self.pressed_keys.contains(&KeyCode::ShiftLeft)
-                            || self.pressed_keys.contains(&KeyCode::ShiftRight)
-                        {
-                            translation *= 4.0;
-                        }
-                        if self.pressed_keys.contains(&KeyCode::AltLeft)
-                            || self.pressed_keys.contains(&KeyCode::AltRight)
-                        {
-                            translation /= 4.0;
-                        }
-
-                        translation *= 10.0;
-                        translation *= dt;
-
-                        self.camera.translate(translation);
-
-                        self.camera_smoothed.lerp_exp(&self.camera, dt);
-                    }
-                };
-                self.last_render_time = Some(now);
-
-                let renderer = self.renderer.get_mut().unwrap();
-                renderer.render(self.camera_smoothed.matrix().inverse());
-                self.window.get().unwrap().request_redraw();
+                if let Some(renderer) = self.renderer.get_mut()
+                    && let Some(window) = self.window.get()
+                {
+                    let t = self
+                        .start_time
+                        .get_or_init(|| Instant::now())
+                        .elapsed()
+                        .as_secs_f32();
+                    renderer.render(t);
+                    window.request_redraw();
+                }
             }
 
             WindowEvent::CloseRequested => {
                 event_loop.exit();
-            }
-
-            WindowEvent::MouseInput {
-                button: MouseButton::Back,
-                state: ElementState::Pressed,
-                ..
-            }
-            | WindowEvent::DoubleTapGesture { .. } => {
-                self.camera.reset();
-            }
-
-            WindowEvent::MouseInput { button, state, .. } => {
-                self.dragging = if state == ElementState::Pressed {
-                    Some(button)
-                } else {
-                    None
-                };
-            }
-
-            WindowEvent::Focused(false) => {
-                self.dragging = None;
-            }
-
-            WindowEvent::MouseWheel {
-                delta: MouseScrollDelta::PixelDelta(delta),
-                ..
-            } => {
-                self.camera
-                    .orbit(-0.01 * delta.x as f32, -0.01 * delta.y as f32);
-            }
-
-            WindowEvent::MouseWheel {
-                delta: MouseScrollDelta::LineDelta(_, delta),
-                ..
-            } => {
-                self.camera.zoom(-0.2 * delta as f32);
-            }
-
-            WindowEvent::PinchGesture { delta, .. } => {
-                self.camera.zoom(-delta as f32);
             }
 
             WindowEvent::KeyboardInput {
@@ -166,47 +73,6 @@ impl ApplicationHandler for App {
                 ..
             } => {
                 event_loop.exit();
-            }
-
-            WindowEvent::KeyboardInput {
-                event:
-                    KeyEvent {
-                        physical_key: PhysicalKey::Code(code),
-                        state,
-                        repeat: false,
-                        ..
-                    },
-                ..
-            } => match state {
-                ElementState::Pressed => {
-                    self.pressed_keys.insert(code);
-                }
-                ElementState::Released => {
-                    self.pressed_keys.remove(&code);
-                }
-            },
-
-            _ => {}
-        }
-    }
-
-    fn device_event(
-        &mut self,
-        _event_loop: &ActiveEventLoop,
-        _device_id: winit::event::DeviceId,
-        event: winit::event::DeviceEvent,
-    ) {
-        match event {
-            DeviceEvent::MouseMotion { delta: (x, y) }
-                if matches!(self.dragging, Some(MouseButton::Left)) =>
-            {
-                self.camera.orbit(-0.01 * x as f32, -0.01 * y as f32);
-            }
-
-            DeviceEvent::MouseMotion { delta: (x, y) }
-                if matches!(self.dragging, Some(MouseButton::Right)) =>
-            {
-                self.camera.pan(0.01 * x as f32, -0.01 * y as f32);
             }
 
             _ => {}
