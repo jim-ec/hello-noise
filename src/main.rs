@@ -36,7 +36,6 @@ fn main() -> eframe::Result {
 #[derive(Debug, Clone, Copy)]
 struct Parameters {
     mode: Mode,
-    interpolation: Interpolation,
     zoom: f32,
     panning: Vec2,
 }
@@ -48,14 +47,6 @@ enum Mode {
     Perlin,
     #[default]
     Simplex,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
-enum Interpolation {
-    Step,
-    Linear,
-    Cubic,
-    Quintic,
 }
 
 #[derive(Debug)]
@@ -117,7 +108,6 @@ impl MyApp {
                 mode: Mode::default(),
                 zoom: 2.0,
                 panning: Vec2::ZERO,
-                interpolation: Interpolation::Cubic,
             },
         }
     }
@@ -181,22 +171,6 @@ impl eframe::App for MyApp {
                         });
 
                         ui.horizontal(|ui| {
-                            ui.label("Interp");
-
-                            for interpolation in all::<Interpolation>() {
-                                if ui
-                                    .selectable_label(
-                                        self.parameters.interpolation == interpolation,
-                                        format!("{interpolation:?}"),
-                                    )
-                                    .clicked()
-                                {
-                                    self.parameters.interpolation = interpolation;
-                                }
-                            }
-                        });
-
-                        ui.horizontal(|ui| {
                             ui.label("Zoom");
                             ui.add(egui::DragValue::new(&mut self.parameters.zoom).speed(0.01));
                             ui.label(format!("(x{:.2e})", self.parameters.zoom.exp()));
@@ -232,7 +206,6 @@ pub struct PushConstants {
     time: f32,
     zoom: f32,
     mode: u32,
-    interpolation: u32,
 }
 
 impl egui_wgpu::CallbackTrait for Parameters {
@@ -259,12 +232,6 @@ impl egui_wgpu::CallbackTrait for Parameters {
                     Mode::Value => 1,
                     Mode::Perlin => 2,
                     Mode::Simplex => 3,
-                },
-                interpolation: match self.interpolation {
-                    Interpolation::Step => 0,
-                    Interpolation::Linear => 1,
-                    Interpolation::Cubic => 2,
-                    Interpolation::Quintic => 3,
                 },
             }]),
         );

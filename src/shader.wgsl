@@ -4,7 +4,6 @@ struct Parameters {
     time: f32,
     zoom: f32,
     mode: u32,
-    interpolation: u32,
 }
 
 var<push_constant> parameters: Parameters;
@@ -18,11 +17,6 @@ const MODE_UV: u32 = 0;
 const MODE_VALUE: u32 = 1;
 const MODE_PERLIN: u32 = 2;
 const MODE_SIMPLEX: u32 = 3;
-
-const INTERPOLATION_STEP: u32 = 0;
-const INTERPOLATION_LINEAR: u32 = 1;
-const INTERPOLATION_CUBIC: u32 = 2;
-const INTERPOLATION_QUINTIC: u32 = 3;
 
 const TAU: f32 = 6.2831853072;
 
@@ -152,24 +146,11 @@ fn unit_vector(angle: f32) -> vec2<f32> {
 fn k(t: f32) -> f32 {
     let t2 = t * t;
     let t3 = t * t2;
-    let t4 = t * t3;
-    let t5 = t * t4;
+    let t4 = t * t2;
+    let t5 = t * t2;
 
-    if (parameters.interpolation == INTERPOLATION_STEP) {
-        return step(0.5, t);
-    }
-    else if (parameters.interpolation == INTERPOLATION_LINEAR) {
-        return t;
-    }
-    else if (parameters.interpolation == INTERPOLATION_CUBIC) {
-        return 3 * t2 - 2 * t3;
-    }
-    else if (parameters.interpolation == INTERPOLATION_QUINTIC) {
-        return 6 * t5 - 15 * t4 + 10 * t3;
-    }
-    else {
-        return 0.0;
-    }
+    // return 6 * t5 - 15 * t4 + 10 * t3;
+    return 3 * t2 - 2 * t3;
 }
 
 fn rand(v: vec2<f32>) -> f32 {
