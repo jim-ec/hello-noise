@@ -1,11 +1,12 @@
-struct Uniforms {
+struct Parameters {
+    panning: vec2<f32>,
     aspect_ratio: f32,
     time: f32,
     zoom: f32,
     mode: u32,
 }
 
-var<push_constant> uniforms: Uniforms;
+var<push_constant> parameters: Parameters;
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
@@ -30,7 +31,7 @@ fn vertex(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
     let id = (vec2(0x2u, 0x1u) >> vec2(vertex_index)) & vec2(1u); // [0, 1]^2
     let uv = vec2<i32>(id << vec2(2u)) - 1; // [-1, 3]^2
     var out: VertexOutput;
-    out.uv = vec2<f32>(exp(uniforms.zoom) * vec2<f32>(uv)) * vec2(uniforms.aspect_ratio, 1.0);
+    out.uv = vec2<f32>(exp(parameters.zoom) * (parameters.panning + vec2<f32>(uv))) * vec2(parameters.aspect_ratio, 1.0);
     out.position = vec4(vec2<f32>(uv), 0.0, 1.0);
     return out;
 }
@@ -38,13 +39,13 @@ fn vertex(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;
-    let noise = noise(uniforms.mode, uv);
-    let color = color(uniforms.mode, noise, uv);
+    let noise = noise(parameters.mode, uv);
+    let color = color(parameters.mode, noise, uv);
     return vec4(pow(color, vec3(2.2)), 1.0);
 }
 
 fn color(mode: u32, noise: f32, uv: vec2<f32>) -> vec3<f32> {
-    if (MODE_UV == uniforms.mode) {
+    if (MODE_UV == parameters.mode) {
         return vec3(fract(uv), 0.0);
     }
     else {
@@ -53,10 +54,10 @@ fn color(mode: u32, noise: f32, uv: vec2<f32>) -> vec3<f32> {
 }
 
 fn noise(mode: u32, uv: vec2<f32>) -> f32 {
-    if (MODE_VALUE == uniforms.mode) {
+    if (MODE_VALUE == parameters.mode) {
         return value_noise(uv);
     }
-    else if (MODE_PERLIN == uniforms.mode) {
+    else if (MODE_PERLIN == parameters.mode) {
         return perlin_noise(uv);
     }
     else {

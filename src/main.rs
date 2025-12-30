@@ -1,4 +1,5 @@
 use eframe::egui_wgpu::wgpu::*;
+use egui::Vec2;
 use enum_iterator::{Sequence, all};
 
 fn main() -> eframe::Result {
@@ -32,11 +33,11 @@ fn main() -> eframe::Result {
     )
 }
 
-// TODO: Panning
 #[derive(Debug, Clone, Copy)]
 struct Parameters {
     mode: Mode,
-    zoom: f32, // TODO: Zoom by pinching and scrolling
+    zoom: f32,
+    panning: Vec2,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
@@ -104,6 +105,7 @@ impl MyApp {
             parameters: Parameters {
                 mode: Mode::Value,
                 zoom: 2.0,
+                panning: Vec2::ZERO,
             },
         }
     }
@@ -114,10 +116,20 @@ impl eframe::App for MyApp {
         egui::CentralPanel::default()
             .frame(egui::Frame::default().fill(ctx.style().visuals.panel_fill))
             .show(&ctx, |ui| {
-                let (rect, _response) = ui.allocate_exact_size(
+                let (rect, response) = ui.allocate_exact_size(
                     egui::Vec2::new(ui.available_width(), ui.available_height()),
-                    egui::Sense::hover(),
+                    egui::Sense::drag(),
                 );
+
+                {
+                    let mut delta = response.drag_delta();
+                    delta.x = -delta.x;
+                    self.parameters.panning += 2.0 * delta / rect.size();
+                }
+
+                ui.input(|input| {
+                    self.parameters.zoom -= 0.005 * input.smooth_scroll_delta.y;
+                });
 
                 ui.painter().add(egui_wgpu::Callback::new_paint_callback(
                     rect,
@@ -139,6 +151,12 @@ impl eframe::App for MyApp {
                     });
 
                     f32_ui(ui, "Zoom", &mut self.parameters.zoom);
+
+                    ui.horizontal(|ui| {
+                        ui.label("Pan");
+                        ui.add(egui::DragValue::new(&mut self.parameters.panning[0]).speed(0.01));
+                        ui.add(egui::DragValue::new(&mut self.parameters.panning[1]).speed(0.01));
+                    });
 
                     if let Some(render_state) = frame.wgpu_render_state() {
                         let info = render_state.adapter.get_info();
@@ -162,6 +180,7 @@ fn f32_ui(ui: &mut egui::Ui, label: impl Into<egui::WidgetText>, x: &mut f32) {
 #[allow(dead_code)]
 #[repr(C)]
 pub struct PushConstants {
+    panning: [f32; 2],
     aspect_ratio: f32,
     time: f32,
     zoom: f32,
@@ -183,6 +202,7 @@ impl egui_wgpu::CallbackTrait for Parameters {
             ShaderStages::VERTEX | ShaderStages::FRAGMENT,
             0,
             as_byte_slice(&[PushConstants {
+                panning: self.panning.into(),
                 time: 0.0,
                 zoom: self.zoom,
                 aspect_ratio: info.viewport.aspect_ratio(),
