@@ -39,6 +39,7 @@ struct Parameters {
     zoom: f32,
     panning: Vec2,
     time: f32,
+    dim: Dim,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
@@ -48,6 +49,13 @@ enum Mode {
     Perlin,
     #[default]
     Simplex,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
+enum Dim {
+    #[default]
+    D2,
+    D3,
 }
 
 #[derive(Debug)]
@@ -110,6 +118,7 @@ impl MyApp {
                 zoom: 2.0,
                 panning: Vec2::ZERO,
                 time: 0.0,
+                dim: Dim::default(),
             },
         }
     }
@@ -128,7 +137,8 @@ impl eframe::App for MyApp {
                 );
 
                 self.parameters.panning +=
-                    2.0 * vec2(-1.0, 1.0) * response.drag_delta() / rect.size();
+                    2.0 * vec2(-1.0, 1.0) * response.drag_delta() * self.parameters.zoom.exp()
+                        / rect.size();
 
                 ui.input(|input| {
                     let get_axis = |neg: Key, pos: Key| {
@@ -175,6 +185,25 @@ impl eframe::App for MyApp {
                         });
 
                         ui.horizontal(|ui| {
+                            ui.label("Dim");
+
+                            for dim in all::<Dim>() {
+                                if ui
+                                    .selectable_label(
+                                        self.parameters.dim == dim,
+                                        match dim {
+                                            Dim::D2 => "2D",
+                                            Dim::D3 => "3D",
+                                        },
+                                    )
+                                    .clicked()
+                                {
+                                    self.parameters.dim = dim;
+                                }
+                            }
+                        });
+
+                        ui.horizontal(|ui| {
                             ui.label("Zoom");
                             ui.add(egui::DragValue::new(&mut self.parameters.zoom).speed(0.01));
                             ui.label(format!("(x{:.2e})", self.parameters.zoom.exp()));
@@ -210,6 +239,7 @@ pub struct PushConstants {
     time: f32,
     zoom: f32,
     mode: u32,
+    dim: u32,
 }
 
 impl egui_wgpu::CallbackTrait for Parameters {
@@ -236,6 +266,10 @@ impl egui_wgpu::CallbackTrait for Parameters {
                     Mode::Value => 1,
                     Mode::Perlin => 2,
                     Mode::Simplex => 3,
+                },
+                dim: match self.dim {
+                    Dim::D2 => 2,
+                    Dim::D3 => 3,
                 },
             }]),
         );
