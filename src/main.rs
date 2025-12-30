@@ -320,8 +320,7 @@ impl eframe::App for MyApp {
                         if let Some(render_state) = frame.wgpu_render_state() {
                             let info = render_state.adapter.get_info();
                             ui.separator();
-                            ui.label(format!("Adapter: {}", info.name));
-                            ui.label(format!("Backend: {:?}", info.backend));
+                            ui.label(format!("GPU: {} ({:?})", info.name, info.backend));
                         }
                     })
             });
