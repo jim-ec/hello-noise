@@ -1,5 +1,5 @@
 use eframe::egui_wgpu::wgpu::*;
-use egui::Vec2;
+use egui::{Key, Vec2, vec2};
 use enum_iterator::{Sequence, all};
 
 fn main() -> eframe::Result {
@@ -113,6 +113,8 @@ impl MyApp {
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        ctx.request_repaint();
+
         egui::CentralPanel::default()
             .frame(egui::Frame::default().fill(ctx.style().visuals.panel_fill))
             .show(&ctx, |ui| {
@@ -121,14 +123,25 @@ impl eframe::App for MyApp {
                     egui::Sense::drag(),
                 );
 
-                {
-                    let mut delta = response.drag_delta();
-                    delta.x = -delta.x;
-                    self.parameters.panning += 2.0 * delta / rect.size();
-                }
+                self.parameters.panning +=
+                    2.0 * vec2(-1.0, 1.0) * response.drag_delta() / rect.size();
 
                 ui.input(|input| {
+                    let get_axis = |neg: Key, pos: Key| {
+                        (input.key_down(pos) as i8 - input.key_down(neg) as i8) as f32
+                    };
+
                     self.parameters.zoom -= 0.005 * input.smooth_scroll_delta.y;
+                    self.parameters.zoom -= input.zoom_delta().ln();
+                    self.parameters.zoom -= input.stable_dt * get_axis(Key::Q, Key::E);
+
+                    self.parameters.panning += input.stable_dt
+                        * self.parameters.zoom.exp()
+                        * 1.2
+                        * vec2(
+                            get_axis(Key::A, Key::D) + get_axis(Key::ArrowLeft, Key::ArrowRight),
+                            get_axis(Key::S, Key::W) + get_axis(Key::ArrowDown, Key::ArrowUp),
+                        );
                 });
 
                 ui.painter().add(egui_wgpu::Callback::new_paint_callback(

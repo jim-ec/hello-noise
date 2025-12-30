@@ -31,7 +31,7 @@ fn vertex(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
     let id = (vec2(0x2u, 0x1u) >> vec2(vertex_index)) & vec2(1u); // [0, 1]^2
     let uv = vec2<i32>(id << vec2(2u)) - 1; // [-1, 3]^2
     var out: VertexOutput;
-    out.uv = vec2<f32>(exp(parameters.zoom) * (parameters.panning + vec2<f32>(uv))) * vec2(parameters.aspect_ratio, 1.0);
+    out.uv = vec2<f32>(parameters.panning + exp(parameters.zoom) * (vec2<f32>(uv))) * vec2(parameters.aspect_ratio, 1.0);
     out.position = vec4(vec2<f32>(uv), 0.0, 1.0);
     return out;
 }
