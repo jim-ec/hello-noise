@@ -19,6 +19,7 @@ pub struct Renderer {
 pub struct Uniforms {
     aspect_ratio: f32,
     time: f32,
+    zoom: f32,
 }
 
 impl Renderer {
@@ -134,6 +135,7 @@ impl Renderer {
             as_byte_slice(&[Uniforms {
                 time,
                 aspect_ratio: self.config.width as f32 / self.config.height as f32,
+                zoom: 20.0,
             }]),
         );
 
