@@ -41,11 +41,13 @@ struct Parameters {
     panning: Vec2,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
 enum Mode {
     UV,
     Value,
     Perlin,
+    #[default]
+    Simplex,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
@@ -112,7 +114,7 @@ impl MyApp {
 
         Self {
             parameters: Parameters {
-                mode: Mode::Value,
+                mode: Mode::default(),
                 zoom: 2.0,
                 panning: Vec2::ZERO,
                 interpolation: Interpolation::Cubic,
@@ -256,6 +258,7 @@ impl egui_wgpu::CallbackTrait for Parameters {
                     Mode::UV => 0,
                     Mode::Value => 1,
                     Mode::Perlin => 2,
+                    Mode::Simplex => 3,
                 },
                 interpolation: match self.interpolation {
                     Interpolation::Step => 0,

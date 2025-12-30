@@ -17,6 +17,7 @@ struct VertexOutput {
 const MODE_UV: u32 = 0;
 const MODE_VALUE: u32 = 1;
 const MODE_PERLIN: u32 = 2;
+const MODE_SIMPLEX: u32 = 3;
 
 const INTERPOLATION_STEP: u32 = 0;
 const INTERPOLATION_LINEAR: u32 = 1;
@@ -66,6 +67,9 @@ fn noise(mode: u32, uv: vec2<f32>) -> f32 {
     else if (MODE_PERLIN == parameters.mode) {
         return perlin_noise(uv);
     }
+    else if (MODE_SIMPLEX == parameters.mode) {
+        return simplex_noise(uv);
+    }
     else {
         return 0.0;
     }
@@ -106,6 +110,39 @@ fn perlin_noise(p: vec2<f32>) -> f32 {
     let nxy = mix(nx0, nx1, k(f.y));
 
     return nxy;
+}
+
+fn simplex_noise(p: vec2<f32>) -> f32 {
+    const F2 = 0.5 * (sqrt(3.0) - 1.0);
+    const G2 = (3.0 - sqrt(3.0)) / 6.0;
+
+    // The simplex origin in skewed space
+    let s = vec2(floor(p + (p.x + p.y) * F2));
+
+    // The simplex origin in world space
+    let i = s - (s.x + s.y) * G2;
+
+    // Offset to the simplex origin in world space
+    let f0 = p - i;
+
+    // The intermediately traversed vertex relative to the simplex origin
+    let v1: vec2<f32> = select(vec2(0.0, 1.0), vec2(1.0, 0.0), f0.x > f0.y);
+
+    // Offsets to the other two simplex vertices in world space
+    let f1 = f0 - v1 + G2;
+    let f2 = f0 - 1.0 + 2.0 * G2;
+
+    let r = vec3(dot(f0, f0), dot(f1, f1), dot(f2, f2));
+    let m = max(vec3(0.0), 0.5 - r);
+
+    // Generate normalized gradient vectors at each simplex vertex
+    let g0 = unit_vector(rand(s) * TAU);
+    let g1 = unit_vector(rand(s + v1) * TAU);
+    let g2 = unit_vector(rand(s + 1.0) * TAU);
+
+    let n = dot(m * m * m * m, vec3(dot(g0, f0), dot(g1, f1), dot(g2, f2)));
+
+    return 70.0 * n;
 }
 
 fn unit_vector(angle: f32) -> vec2<f32> {
