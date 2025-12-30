@@ -57,15 +57,15 @@ enum Mode {
     UV,
     Value,
     Perlin,
-    Simplex,
     #[default]
+    Simplex,
     Worley,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
 enum Dim {
-    #[default]
     D2,
+    #[default]
     D3,
 }
 
@@ -188,10 +188,9 @@ impl eframe::App for MyApp {
 
                 egui::Window::new("Noise Generator")
                     .default_size([0.0, 0.0])
+                    .resizable(false)
                     .show(ctx, |ui| {
                         ui.horizontal(|ui| {
-                            ui.label("Mode");
-
                             for mode in all::<Mode>() {
                                 if ui
                                     .selectable_label(
