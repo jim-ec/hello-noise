@@ -50,14 +50,15 @@ enum Mode {
     UV,
     Value,
     Perlin,
-    #[default]
     Simplex,
+    #[default]
+    Worley,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
 enum Dim {
-    D2,
     #[default]
+    D2,
     D3,
 }
 
@@ -297,6 +298,7 @@ impl egui_wgpu::CallbackTrait for Parameters {
                     Mode::Value => 1,
                     Mode::Perlin => 2,
                     Mode::Simplex => 3,
+                    Mode::Worley => 4,
                 },
                 dim: match self.dim {
                     Dim::D2 => 2,

@@ -21,6 +21,7 @@ const MODE_UV: u32 = 0;
 const MODE_VALUE: u32 = 1;
 const MODE_PERLIN: u32 = 2;
 const MODE_SIMPLEX: u32 = 3;
+const MODE_WORLEY: u32 = 4;
 
 const TAU: f32 = 6.2831853072;
 
@@ -102,16 +103,18 @@ fn noise(p: vec2<f32>) -> f32 {
     }
 }
 
-fn noise_2d(x: vec2<f32>) -> f32 {
+fn noise_2d(p: vec2<f32>) -> f32 {
     if (MODE_VALUE == parameters.mode) {
-        return value_noise_2d(x);
+        return value_noise_2d(p);
     }
     else if (MODE_PERLIN == parameters.mode) {
-        return perlin_noise_2d(x);
+        return perlin_noise_2d(p);
     }
     else if (MODE_SIMPLEX == parameters.mode) {
-        // return simplex_noise(uv);
-        return simplex_noise_2d(x);
+        return simplex_noise_2d(p);
+    }
+    else if (MODE_WORLEY == parameters.mode) {
+        return worley_noise_2d(p);
     }
     else {
         return 0.0;
@@ -127,6 +130,9 @@ fn noise_3d(p: vec3<f32>) -> f32 {
     }
     else if (MODE_SIMPLEX == parameters.mode) {
         return simplex_noise_3d(p);
+    }
+    else if (MODE_WORLEY == parameters.mode) {
+        return worley_noise_3d(p);
     }
     else {
         return 0.0;
@@ -322,6 +328,48 @@ fn simplex_noise_3d(p: vec3<f32>) -> f32 {
     let n = dot(m4, grad_dots);
 
     return 32.0 * n;
+}
+
+fn worley_noise_2d(p: vec2<f32>) -> f32 {
+    let i = floor(p);
+    let f = fract(p);
+
+    let d_max = sqrt(2.0);
+    var d_min = d_max;
+
+    for (var y = -1; y <= 1; y++) {
+        for (var x = -1; x <= 1; x++) {
+            let neighbor = vec2<f32>(f32(x), f32(y));
+            let cell_id = i + neighbor;
+            let point_local = rand_vec2(cell_id) * 0.5 + 0.5;
+            let d = length(neighbor + point_local - f);
+            d_min = min(d_min, d);
+        }
+    }
+
+    return d_min / d_max;
+}
+
+fn worley_noise_3d(p: vec3<f32>) -> f32 {
+    let i = floor(p);
+    let f = fract(p);
+
+    let d_max = sqrt(3.0);
+    var d_min = d_max;
+
+    for (var z = -1; z <= 1; z++) {
+        for (var y = -1; y <= 1; y++) {
+            for (var x = -1; x <= 1; x++) {
+                let neighbor = vec3<f32>(f32(x), f32(y), f32(z));
+                let cell_id = i + neighbor;
+                let point_local = rand_vec3(cell_id) * 0.5 + 0.5;
+                let d = length(neighbor + point_local - f);
+                d_min = min(d_min, d);
+            }
+        }
+    }
+
+    return d_min / d_max;
 }
 
 fn rand_vec2(p: vec2<f32>) -> vec2<f32> {
