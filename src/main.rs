@@ -149,39 +149,48 @@ impl eframe::App for MyApp {
                     self.parameters,
                 ));
 
-                egui::Window::new("Noise Generator").show(ctx, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label("Mode");
+                egui::Window::new("Noise Generator")
+                    .default_size([0.0, 0.0])
+                    .show(ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label("Mode");
 
-                        for mode in all::<Mode>() {
-                            if ui
-                                .selectable_label(self.parameters.mode == mode, format!("{mode:?}"))
-                                .clicked()
-                            {
-                                self.parameters.mode = mode;
+                            for mode in all::<Mode>() {
+                                if ui
+                                    .selectable_label(
+                                        self.parameters.mode == mode,
+                                        format!("{mode:?}"),
+                                    )
+                                    .clicked()
+                                {
+                                    self.parameters.mode = mode;
+                                }
                             }
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Zoom");
+                            ui.add(egui::DragValue::new(&mut self.parameters.zoom).speed(0.01));
+                            ui.label(format!("(x{:.2e})", self.parameters.zoom.exp()));
+                        });
+
+                        ui.horizontal(|ui| {
+                            ui.label("Pan");
+                            ui.add(
+                                egui::DragValue::new(&mut self.parameters.panning[0]).speed(0.01),
+                            );
+                            ui.add(
+                                egui::DragValue::new(&mut self.parameters.panning[1]).speed(0.01),
+                            );
+                        });
+
+                        if let Some(render_state) = frame.wgpu_render_state() {
+                            let info = render_state.adapter.get_info();
+                            ui.separator();
+                            ui.label(format!("Adapter: {}", info.name));
+                            ui.label(format!("Backend: {:?}", info.backend));
                         }
-                    });
-
-                    ui.horizontal(|ui| {
-                        ui.label("Zoom");
-                        ui.add(egui::DragValue::new(&mut self.parameters.zoom).speed(0.01));
-                        ui.label(format!("(x{:.2e})", self.parameters.zoom.exp()));
-                    });
-
-                    ui.horizontal(|ui| {
-                        ui.label("Pan");
-                        ui.add(egui::DragValue::new(&mut self.parameters.panning[0]).speed(0.01));
-                        ui.add(egui::DragValue::new(&mut self.parameters.panning[1]).speed(0.01));
-                    });
-
-                    if let Some(render_state) = frame.wgpu_render_state() {
-                        let info = render_state.adapter.get_info();
-                        ui.separator();
-                        ui.label(format!("Adapter: {}", info.name));
-                        ui.label(format!("Backend: {:?}", info.backend));
-                    }
-                })
+                    })
             });
     }
 }
