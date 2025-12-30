@@ -2,14 +2,19 @@ struct Uniforms {
     aspect_ratio: f32,
     time: f32,
     zoom: f32,
+    mode: u32,
 }
 
-@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+var<push_constant> uniforms: Uniforms;
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) uv: vec2<f32>,
 }
+
+const MODE_UV: u32 = 0;
+const MODE_VALUE: u32 = 1;
+const MODE_PERLIN: u32 = 2;
 
 const TAU: f32 = 6.2831853072;
 
@@ -22,27 +27,41 @@ fn vertex(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
     // Tri #0: A C B => X: 0 0 1 | 1 0 1 => 0b101100 => 0x2c
     // Tri #1: B C D => Y: 0 1 0 | 0 1 1 => 0b110010 => 0x32
     let id = (vec2(0x2cu, 0x32u) >> vec2(vertex_index % 6u)) & vec2(1u);
+    let uv = vec2<f32>(vec2<i32>(id << vec2(1)) - 1);
 
     var out: VertexOutput;
-    out.uv = vec2<f32>(id) * vec2(uniforms.aspect_ratio, 1.0);
-    out.position = vec4(vec2<f32>(vec2<i32>(id << vec2(1)) - 1), 0.0, 1.0);
+    out.uv = vec2<f32>(exp(uniforms.zoom) * uv) * vec2(uniforms.aspect_ratio, 1.0);
+    out.position = vec4(uv, 0.0, 1.0);
     return out;
 }
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
-    var color: vec3<f32>;
-
-    color.r = in.uv.x;
-    color.g = in.uv.y;
-    color.b = cos(uniforms.time) * 0.5 + 0.5;
-
-    let uv = uniforms.zoom * in.uv;
-    // let noise = perlin_noise(uv);
-    let noise = value_noise(uv);
-    color = vec3(noise) * 0.5 + 0.5;
-
+    let uv = in.uv;
+    let noise = noise(uniforms.mode, uv);
+    let color = color(uniforms.mode, noise, uv);
     return vec4(pow(color, vec3(2.2)), 1.0);
+}
+
+fn color(mode: u32, noise: f32, uv: vec2<f32>) -> vec3<f32> {
+    if (MODE_UV == uniforms.mode) {
+        return vec3(fract(uv), 0.0);
+    }
+    else {
+        return vec3(noise) * 0.5 + 0.5;
+    }
+}
+
+fn noise(mode: u32, uv: vec2<f32>) -> f32 {
+    if (MODE_VALUE == uniforms.mode) {
+        return value_noise(uv);
+    }
+    else if (MODE_PERLIN == uniforms.mode) {
+        return perlin_noise(uv);
+    }
+    else {
+        return 0.0;
+    }
 }
 
 fn perlin_noise(p: vec2<f32>) -> f32 {
