@@ -20,18 +20,18 @@ const TAU: f32 = 6.2831853072;
 
 @vertex
 fn vertex(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
-    // Bit patterns of quad vertices:
+    // Bit patterns of vertices:
     // A - B
-    // | / |
-    // C - D
-    // Tri #0: A C B => X: 0 0 1 | 1 0 1 => 0b101100 => 0x2c
-    // Tri #1: B C D => Y: 0 1 0 | 0 1 1 => 0b110010 => 0x32
-    let id = (vec2(0x2cu, 0x32u) >> vec2(vertex_index % 6u)) & vec2(1u);
-    let uv = vec2<f32>(vec2<i32>(id << vec2(1)) - 1);
-
+    // | /
+    // C
+    // Tri: A C B
+    // X: 0 1 0 => 0b010 => 0x2
+    // Y: 0 0 1 => 0b001 => 0x1
+    let id = (vec2(0x2u, 0x1u) >> vec2(vertex_index)) & vec2(1u); // [0, 1]^2
+    let uv = vec2<i32>(id << vec2(2u)) - 1; // [-1, 3]^2
     var out: VertexOutput;
-    out.uv = vec2<f32>(exp(uniforms.zoom) * uv) * vec2(uniforms.aspect_ratio, 1.0);
-    out.position = vec4(uv, 0.0, 1.0);
+    out.uv = vec2<f32>(exp(uniforms.zoom) * vec2<f32>(uv)) * vec2(uniforms.aspect_ratio, 1.0);
+    out.position = vec4(vec2<f32>(uv), 0.0, 1.0);
     return out;
 }
 

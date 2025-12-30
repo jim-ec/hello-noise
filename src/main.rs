@@ -193,8 +193,7 @@ impl egui_wgpu::CallbackTrait for Parameters {
                 },
             }]),
         );
-        // TODO: Render fullscreen triangle instead of a quad
-        pass.draw(0..6, 0..1);
+        pass.draw(0..3, 0..1);
     }
 }
 
