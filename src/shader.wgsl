@@ -5,6 +5,8 @@ struct Parameters {
     zoom: f32,
     mode: u32,
     dim: u32,
+    warp: u32,
+    warp_strength: f32,
 }
 
 var<push_constant> parameters: Parameters;
@@ -41,7 +43,7 @@ fn vertex(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;
-    let noise = noise(uv);
+    let noise = warped_noise(uv);
     let color = color(noise, uv);
     return vec4(pow(color, vec3(2.2)), 1.0);
 }
@@ -55,12 +57,23 @@ fn color(noise: f32, uv: vec2<f32>) -> vec3<f32> {
     }
 }
 
-fn noise(uv: vec2<f32>) -> f32 {
+fn warped_noise(p: vec2<f32>) -> f32 {
+    var u = vec2(0.0);
+    for (var i = 0u; i < parameters.warp; i++) {
+        u = vec2(
+            noise(p + parameters.warp_strength * u + vec2(27.0, 7.0)),
+            noise(p + parameters.warp_strength * u + vec2(42.0, 31.0)),
+        );
+    }
+    return noise(p + parameters.warp_strength * u);
+}
+
+fn noise(p: vec2<f32>) -> f32 {
     if (parameters.dim == 2) {
-        return noise_2d(uv);
+        return noise_2d(p);
     }
     else if (parameters.dim == 3) {
-        return noise_3d(vec3(uv, parameters.time));
+        return noise_3d(vec3(p, parameters.time));
     }
     else {
         return 0.0;
@@ -83,16 +96,15 @@ fn noise_2d(x: vec2<f32>) -> f32 {
     }
 }
 
-fn noise_3d(x: vec3<f32>) -> f32 {
+fn noise_3d(p: vec3<f32>) -> f32 {
     if (MODE_VALUE == parameters.mode) {
-        return value_noise_3d(x);
+        return value_noise_3d(p);
     }
     else if (MODE_PERLIN == parameters.mode) {
-        return perlin_noise_3d(x);
+        return perlin_noise_3d(p);
     }
     else if (MODE_SIMPLEX == parameters.mode) {
-        // return simplex_noise(uv);
-        return simplex_noise_3d(x);
+        return simplex_noise_3d(p);
     }
     else {
         return 0.0;

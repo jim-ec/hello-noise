@@ -40,6 +40,8 @@ struct Parameters {
     panning: Vec2,
     time: f32,
     dim: Dim,
+    warps: u32,
+    warp_strength: f32,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
@@ -119,6 +121,8 @@ impl MyApp {
                 panning: Vec2::ZERO,
                 time: 0.0,
                 dim: Dim::default(),
+                warps: 0,
+                warp_strength: 4.0,
             },
         }
     }
@@ -204,6 +208,19 @@ impl eframe::App for MyApp {
                         });
 
                         ui.horizontal(|ui| {
+                            ui.label("Warp");
+                            ui.add(egui::DragValue::new(&mut self.parameters.warps).speed(0.05));
+                            ui.label("Strength");
+                            ui.add(
+                                egui::DragValue::new(&mut self.parameters.warp_strength)
+                                    .speed(0.05)
+                                    .range(0.0..=f32::INFINITY),
+                            );
+                        });
+
+                        ui.separator();
+
+                        ui.horizontal(|ui| {
                             ui.label("Zoom");
                             ui.add(egui::DragValue::new(&mut self.parameters.zoom).speed(0.01));
                             ui.label(format!("(x{:.2e})", self.parameters.zoom.exp()));
@@ -240,6 +257,8 @@ pub struct PushConstants {
     zoom: f32,
     mode: u32,
     dim: u32,
+    warps: u32,
+    warp_strength: f32,
 }
 
 impl egui_wgpu::CallbackTrait for Parameters {
@@ -271,6 +290,8 @@ impl egui_wgpu::CallbackTrait for Parameters {
                     Dim::D2 => 2,
                     Dim::D3 => 3,
                 },
+                warps: self.warps,
+                warp_strength: self.warp_strength,
             }]),
         );
         pass.draw(0..3, 0..1);
