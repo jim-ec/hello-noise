@@ -45,6 +45,7 @@ struct Parameters {
     octaves: u32,
     time_scale: f32,
     quantize: bool,
+    dither: bool,
     levels: u32,
     saturation: f32,
 }
@@ -134,6 +135,7 @@ impl MyApp {
                 quantize: false,
                 levels: 16,
                 saturation: 1.0,
+                dither: false,
             },
         }
     }
@@ -261,6 +263,14 @@ impl eframe::App for MyApp {
                         });
 
                         ui.horizontal(|ui| {
+                            ui.label("Dither");
+                            if !self.parameters.quantize {
+                                ui.disable();
+                            }
+                            ui.checkbox(&mut self.parameters.dither, ());
+                        });
+
+                        ui.horizontal(|ui| {
                             ui.label("Saturation");
                             ui.add(
                                 egui::DragValue::new(&mut self.parameters.saturation).speed(0.01),
@@ -311,6 +321,7 @@ pub struct PushConstants {
     octaves: u32,
     levels: u32,
     saturation: f32,
+    dither: u32,
 }
 
 impl egui_wgpu::CallbackTrait for Parameters {
@@ -348,6 +359,7 @@ impl egui_wgpu::CallbackTrait for Parameters {
                 octaves: self.octaves,
                 levels: if self.quantize { self.levels } else { 0 },
                 saturation: self.saturation,
+                dither: self.dither as u32,
             }]),
         );
         pass.draw(0..3, 0..1);

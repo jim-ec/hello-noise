@@ -10,6 +10,7 @@ struct Parameters {
     octaves: u32,
     levels: u32,
     saturation: f32,
+    dither: u32,
 }
 
 var<push_constant> parameters: Parameters;
@@ -50,16 +51,20 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let noise = warped_noise(uv);
 
     var color = color(noise, uv);
-    color = quantize_color(color);
+
+    color = quantize_color(color, in.position.xy);
     color = saturate_color(color);
 
     return vec4(pow(color, vec3(2.2)), 1.0);
 }
 
-fn quantize_color(color: vec3<f32>) -> vec3<f32> {
+fn quantize_color(color: vec3<f32>, screen_space_position: vec2<f32>) -> vec3<f32> {
+    let step_size = 1.0 / f32(parameters.levels);
+    let dither_noise = rand2(screen_space_position) - 0.5;
+    var dither = select(vec3(0.0), vec3(dither_noise * step_size), vec3<bool>(parameters.dither));
     return select(
         color,
-        trunc(color * f32(parameters.levels)) / f32(parameters.levels),
+        trunc((color + dither) * f32(parameters.levels)) / f32(parameters.levels),
         parameters.levels > 0,
     );
 }
