@@ -50,6 +50,7 @@ struct Parameters {
     dither: bool,
     levels: u32,
     saturation: f32,
+    gradient: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
@@ -139,6 +140,7 @@ impl MyApp {
                 levels: 16,
                 saturation: 1.0,
                 dither: false,
+                gradient: true,
             },
         }
     }
@@ -219,6 +221,13 @@ impl eframe::App for MyApp {
                                 {
                                     self.parameters.dim = dim;
                                 }
+                            }
+
+                            if ui
+                                .selectable_label(self.parameters.gradient, "Gradient")
+                                .clicked()
+                            {
+                                self.parameters.gradient ^= true;
                             }
                         });
 
@@ -343,6 +352,7 @@ pub struct PushConstants {
     levels: u32,
     saturation: f32,
     dither: u32,
+    gradient: u32,
 }
 
 impl egui_wgpu::CallbackTrait for Parameters {
@@ -382,6 +392,7 @@ impl egui_wgpu::CallbackTrait for Parameters {
                 levels: if self.quantize { self.levels } else { 0 },
                 saturation: self.saturation,
                 dither: self.dither as u32,
+                gradient: self.gradient as u32,
             }]),
         );
         pass.draw(0..3, 0..1);

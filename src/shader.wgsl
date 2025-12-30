@@ -13,6 +13,7 @@ struct Parameters {
     levels: u32,
     saturation: f32,
     dither: u32,
+    gradient: u32,
 }
 
 var<push_constant> parameters: Parameters;
@@ -22,7 +23,6 @@ struct VertexOutput {
     @location(0) uv: vec2<f32>,
 }
 
-const MODE_UV: u32 = 0;
 const MODE_VALUE: u32 = 1;
 const MODE_PERLIN: u32 = 2;
 const MODE_SIMPLEX: u32 = 3;
@@ -50,9 +50,14 @@ fn vertex(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;
-    let noise = warped_noise(uv);
+    // let noise = warped_noise(uv);
+    let noise = simplex_noise_2d_grad(uv);
 
-    var color = color(noise, uv);
+    var color = select(
+        vec3(noise.f) * 0.5 + 0.5,
+        vec3(noise.df * 0.5 + 0.5, 0.0),
+        vec3<bool>(parameters.gradient)
+    );
 
     color = quantize_color(color, in.position.xy);
     color = saturate_color(color);
@@ -76,15 +81,6 @@ fn saturate_color(color: vec3<f32>) -> vec3<f32> {
     let lower = 0.5 * pow(2.0 * color, vec3(k));
     let upper = 1.0 - 0.5 * pow(2.0 * (1.0 - color), vec3(k));
     return select(upper, lower, color < vec3(0.5));
-}
-
-fn color(noise: f32, uv: vec2<f32>) -> vec3<f32> {
-    if (MODE_UV == parameters.mode) {
-        return vec3(fract(uv), 0.0);
-    }
-    else {
-        return vec3(noise) * 0.5 + 0.5;
-    }
 }
 
 fn warped_noise(p: vec2<f32>) -> f32 {
@@ -164,6 +160,11 @@ fn noise_3d(p: vec3<f32>) -> f32 {
     }
 }
 
+struct Noise2d {
+    f: f32,
+    df: vec2<f32>,
+}
+
 fn value_noise_2d(p: vec2<f32>) -> f32 {
     let i = floor(p);
     let f = fract(p);
@@ -178,6 +179,32 @@ fn value_noise_2d(p: vec2<f32>) -> f32 {
     let nxy = mix(nx0, nx1, k(f.y));
 
     return nxy;
+}
+
+fn value_noise_2d_grad(p: vec2<f32>) -> Noise2d {
+    let i = floor(p);
+    let f = fract(p);
+
+    let n00 = rand2(i + vec2(0, 0));
+    let n10 = rand2(i + vec2(1, 0));
+    let n01 = rand2(i + vec2(0, 1));
+    let n11 = rand2(i + vec2(1, 1));
+
+    let u = k(f.x);
+    let v = k(f.y);
+
+    // df/dt 3t^2 - 2t^3 is 6t - 6t^2 = 6t(1-t)
+    let du = 6.0 * f.x * (1.0 - f.x);
+    let dv = 6.0 * f.y * (1.0 - f.y);
+
+    let nx0 = mix(n00, n10, u);
+    let nx1 = mix(n01, n11, u);
+
+    var out: Noise2d;
+    out.f = mix(nx0, nx1, v);
+    out.df.x = mix(n10 - n00, n11 - n01, v) * du;
+    out.df.y = mix(n01 - n00, n11 - n10, u) * dv;
+    return out;
 }
 
 fn value_noise_3d(p: vec3<f32>) -> f32 {
@@ -306,6 +333,54 @@ fn simplex_noise_2d(p: vec2<f32>) -> f32 {
     let n = dot(m4, grad_dots);
 
     return 70.0 * n;
+}
+
+fn simplex_noise_2d_grad(p: vec2<f32>) -> Noise2d {
+    const F = 0.5 * (sqrt(3.0) - 1.0);
+    const G = (3.0 - sqrt(3.0)) / 6.0;
+
+    let s = vec2(floor(p + (p.x + p.y) * F));
+    let i = s - (s.x + s.y) * G;
+    let f0 = p - i;
+
+    let v1: vec2<f32> = select(vec2(0.0, 1.0), vec2(1.0, 0.0), f0.x > f0.y);
+
+    let f1 = f0 - v1 + G;
+    let f2 = f0 - 1.0 + 2.0 * G;
+
+    let g0 = rand_vec2(s);
+    let g1 = rand_vec2(s + v1);
+    let g2 = rand_vec2(s + 1.0);
+
+    let r = vec3(dot(f0, f0), dot(f1, f1), dot(f2, f2));
+    let m = max(vec3(0.0), 0.5 - r);
+
+    let m2 = m * m;
+    let m3 = m2 * m;
+    let m4 = m3 * m;
+
+    let grad_dots = vec3(
+        dot(g0, f0),
+        dot(g1, f1),
+        dot(g2, f2),
+    );
+
+    var out: Noise2d;
+
+    out.f = 70.0 * dot(m4, grad_dots);
+
+    // gradient = m^4 * g - 8 * m^3 * (g . f) * f
+
+    // Term 1: m^4 * g (linear contribution from the gradient vector)
+    let term1 = m4.x * g0 + m4.y * g1 + m4.z * g2;
+
+    // Term 2: 8 * m^3 * (g . f) * f (radial falloff contribution)
+    let t2_factors = 8.0 * m3 * grad_dots;
+    let term2 = t2_factors.x * f0 + t2_factors.y * f1 + t2_factors.z * f2;
+
+    out.df = 70.0 * (term1 - term2);
+
+    return out;
 }
 
 fn simplex_noise_3d(p: vec3<f32>) -> f32 {
