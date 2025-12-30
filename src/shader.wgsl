@@ -7,6 +7,7 @@ struct Parameters {
     dim: u32,
     warp: u32,
     warp_strength: f32,
+    octaves: u32,
 }
 
 var<push_constant> parameters: Parameters;
@@ -61,11 +62,32 @@ fn warped_noise(p: vec2<f32>) -> f32 {
     var u = vec2(0.0);
     for (var i = 0u; i < parameters.warp; i++) {
         u = vec2(
-            noise(p + parameters.warp_strength * u + vec2(27.0, 7.0)),
-            noise(p + parameters.warp_strength * u + vec2(42.0, 31.0)),
+            fbm(p + parameters.warp_strength * u + vec2(27.0, 7.0)),
+            fbm(p + parameters.warp_strength * u + vec2(42.0, 31.0)),
         );
     }
-    return noise(p + parameters.warp_strength * u);
+    return fbm(p + parameters.warp_strength * u);
+}
+
+fn fbm(p: vec2<f32>) -> f32 {
+    const LACUNARITY: f32 = 2.0;
+    const PERSISTENCE: f32 = 0.5;
+
+    var n = 0.0;
+
+    var amplitude = 0.5;
+    var frequency = 1.0;
+
+    var q = p;
+
+    for (var i = 0u; i < parameters.octaves; i++) {
+        n += amplitude * noise(q);
+        q *= LACUNARITY;
+        amplitude *= PERSISTENCE;
+        frequency *= LACUNARITY;
+    }
+
+    return n;
 }
 
 fn noise(p: vec2<f32>) -> f32 {

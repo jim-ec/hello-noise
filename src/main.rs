@@ -42,6 +42,7 @@ struct Parameters {
     dim: Dim,
     warps: u32,
     warp_strength: f32,
+    octaves: u32,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
@@ -123,6 +124,7 @@ impl MyApp {
                 dim: Dim::default(),
                 warps: 0,
                 warp_strength: 4.0,
+                octaves: 1,
             },
         }
     }
@@ -208,6 +210,15 @@ impl eframe::App for MyApp {
                         });
 
                         ui.horizontal(|ui| {
+                            ui.label("Octaves");
+                            ui.add(
+                                egui::DragValue::new(&mut self.parameters.octaves)
+                                    .speed(0.05)
+                                    .range(1..=16),
+                            );
+                        });
+
+                        ui.horizontal(|ui| {
                             ui.label("Warp");
                             ui.add(egui::DragValue::new(&mut self.parameters.warps).speed(0.05));
                             ui.label("Strength");
@@ -259,6 +270,7 @@ pub struct PushConstants {
     dim: u32,
     warps: u32,
     warp_strength: f32,
+    octaves: u32,
 }
 
 impl egui_wgpu::CallbackTrait for Parameters {
@@ -292,6 +304,7 @@ impl egui_wgpu::CallbackTrait for Parameters {
                 },
                 warps: self.warps,
                 warp_strength: self.warp_strength,
+                octaves: self.octaves,
             }]),
         );
         pass.draw(0..3, 0..1);
