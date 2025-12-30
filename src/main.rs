@@ -38,6 +38,7 @@ struct Parameters {
     mode: Mode,
     zoom: f32,
     panning: Vec2,
+    time: f32,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
@@ -108,6 +109,7 @@ impl MyApp {
                 mode: Mode::default(),
                 zoom: 2.0,
                 panning: Vec2::ZERO,
+                time: 0.0,
             },
         }
     }
@@ -144,6 +146,8 @@ impl eframe::App for MyApp {
                             get_axis(Key::A, Key::D) + get_axis(Key::ArrowLeft, Key::ArrowRight),
                             get_axis(Key::S, Key::W) + get_axis(Key::ArrowDown, Key::ArrowUp),
                         );
+
+                    self.parameters.time = input.time as f32;
                 });
 
                 ui.painter().add(egui_wgpu::Callback::new_paint_callback(
@@ -224,7 +228,7 @@ impl egui_wgpu::CallbackTrait for Parameters {
             0,
             as_byte_slice(&[PushConstants {
                 panning: self.panning.into(),
-                time: 0.0,
+                time: self.time,
                 zoom: self.zoom,
                 aspect_ratio: info.viewport.aspect_ratio(),
                 mode: match self.mode {

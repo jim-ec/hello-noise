@@ -73,10 +73,10 @@ fn value_noise(p: vec2<f32>) -> f32 {
     let i = floor(p);
     let f = fract(p);
 
-    let n00 = rand(i + vec2(0, 0));
-    let n01 = rand(i + vec2(0, 1));
-    let n10 = rand(i + vec2(1, 0));
-    let n11 = rand(i + vec2(1, 1));
+    let n00 = rand2(i + vec2(0, 0));
+    let n01 = rand2(i + vec2(0, 1));
+    let n10 = rand2(i + vec2(1, 0));
+    let n11 = rand2(i + vec2(1, 1));
 
     let nx0 = mix(n00, n10, k(f.x));
     let nx1 = mix(n01, n11, k(f.x));
@@ -89,10 +89,10 @@ fn perlin_noise(p: vec2<f32>) -> f32 {
     let i = floor(p);
     let f = fract(p);
 
-    let g00 = unit_vector(rand(i + vec2(0, 0)) * TAU);
-    let g01 = unit_vector(rand(i + vec2(0, 1)) * TAU);
-    let g10 = unit_vector(rand(i + vec2(1, 0)) * TAU);
-    let g11 = unit_vector(rand(i + vec2(1, 1)) * TAU);
+    let g00 = unit_vector(rand2(i + vec2(0, 0)) * TAU);
+    let g01 = unit_vector(rand2(i + vec2(0, 1)) * TAU);
+    let g10 = unit_vector(rand2(i + vec2(1, 0)) * TAU);
+    let g11 = unit_vector(rand2(i + vec2(1, 1)) * TAU);
 
     let n00 = dot(g00, f - vec2(0, 0));
     let n01 = dot(g01, f - vec2(0, 1));
@@ -130,9 +130,9 @@ fn simplex_noise(p: vec2<f32>) -> f32 {
     let m = max(vec3(0.0), 0.5 - r);
 
     // Generate normalized gradient vectors at each simplex vertex
-    let g0 = unit_vector(rand(s) * TAU);
-    let g1 = unit_vector(rand(s + v1) * TAU);
-    let g2 = unit_vector(rand(s + 1.0) * TAU);
+    let g0 = unit_vector(rand2(s) * TAU);
+    let g1 = unit_vector(rand2(s + v1) * TAU);
+    let g2 = unit_vector(rand2(s + 1.0) * TAU);
 
     let n = dot(m * m * m * m, vec3(dot(g0, f0), dot(g1, f1), dot(g2, f2)));
 
@@ -153,14 +153,16 @@ fn k(t: f32) -> f32 {
     return 3 * t2 - 2 * t3;
 }
 
-fn rand(v: vec2<f32>) -> f32 {
+fn rand2(v: vec2<f32>) -> f32 {
+    return rand3(vec3(v, 0.0));
+}
+
+fn rand3(v: vec3<f32>) -> f32 {
     let x = bitcast<u32>(v.x);
     let y = bitcast<u32>(v.y);
-
-    let seed = x ^ (y * 0x9E3779B9u);
-
-    let hash = hash_murmur(bitcast<u32>(seed));
-
+    let z = bitcast<u32>(v.z);
+    let seed = x ^ (y * 0x9E3779B9u) ^ (z * 0x1B873593u);
+    let hash = hash_murmur(seed);
     return u32_to_unit_f32(hash) * 2.0 - 1.0;
 }
 
