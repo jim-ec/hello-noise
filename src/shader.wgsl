@@ -71,27 +71,39 @@ fn noise(mode: u32, uv: vec2<f32>) -> f32 {
     }
 }
 
+fn value_noise(p: vec2<f32>) -> f32 {
+    let i = floor(p);
+    let f = fract(p);
+
+    let n00 = rand(i + vec2(0, 0));
+    let n01 = rand(i + vec2(0, 1));
+    let n10 = rand(i + vec2(1, 0));
+    let n11 = rand(i + vec2(1, 1));
+
+    let nx0 = mix(n00, n10, k(f.x));
+    let nx1 = mix(n01, n11, k(f.x));
+    let nxy = mix(nx0, nx1, k(f.y));
+
+    return nxy;
+}
+
 fn perlin_noise(p: vec2<f32>) -> f32 {
-    let x0 = floor(p.x);
-    let y0 = floor(p.y);
-    let x1 = x0 + 1.0;
-    let y1 = y0 + 1.0;
-    let u = p.x - x0;
-    let v = p.y - y0;
+    let i = floor(p);
+    let f = fract(p);
 
-    let g00 = unit_vector(rand(vec2(x0, y0)) * TAU);
-    let g01 = unit_vector(rand(vec2(x0, y1)) * TAU);
-    let g10 = unit_vector(rand(vec2(x1, y0)) * TAU);
-    let g11 = unit_vector(rand(vec2(x1, y1)) * TAU);
+    let g00 = unit_vector(rand(i + vec2(0, 0)) * TAU);
+    let g01 = unit_vector(rand(i + vec2(0, 1)) * TAU);
+    let g10 = unit_vector(rand(i + vec2(1, 0)) * TAU);
+    let g11 = unit_vector(rand(i + vec2(1, 1)) * TAU);
 
-    let n00 = dot(g00, vec2(u, v));
-    let n01 = dot(g01, vec2(u, v - 1));
-    let n10 = dot(g10, vec2(u - 1, v));
-    let n11 = dot(g11, vec2(u - 1, v - 1));
+    let n00 = dot(g00, f - vec2(0, 0));
+    let n01 = dot(g01, f - vec2(0, 1));
+    let n10 = dot(g10, f - vec2(1, 0));
+    let n11 = dot(g11, f - vec2(1, 1));
 
-    let nx0 = mix(n00, n10, f(u));
-    let nx1 = mix(n01, n11, f(u));
-    let nxy = mix(nx0, nx1, f(v));
+    let nx0 = mix(n00, n10, k(f.x));
+    let nx1 = mix(n01, n11, k(f.x));
+    let nxy = mix(nx0, nx1, k(f.y));
 
     return nxy;
 }
@@ -100,7 +112,7 @@ fn unit_vector(angle: f32) -> vec2<f32> {
     return vec2(cos(angle), sin(angle));
 }
 
-fn f(t: f32) -> f32 {
+fn k(t: f32) -> f32 {
     let t2 = t * t;
     let t3 = t * t2;
     let t4 = t * t3;
@@ -121,26 +133,6 @@ fn f(t: f32) -> f32 {
     else {
         return 0.0;
     }
-}
-
-fn value_noise(p: vec2<f32>) -> f32 {
-    let x0 = floor(p.x);
-    let y0 = floor(p.y);
-    let x1 = x0 + 1.0;
-    let y1 = y0 + 1.0;
-    let u = p.x - x0;
-    let v = p.y - y0;
-
-    let n00 = rand(vec2(x0, y0));
-    let n01 = rand(vec2(x0, y1));
-    let n10 = rand(vec2(x1, y0));
-    let n11 = rand(vec2(x1, y1));
-
-    let nx0 = mix(n00, n10, f(u));
-    let nx1 = mix(n01, n11, f(u));
-    let nxy = mix(nx0, nx1, f(v));
-
-    return nxy;
 }
 
 fn rand(v: vec2<f32>) -> f32 {
