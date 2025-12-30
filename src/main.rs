@@ -54,7 +54,6 @@ struct Parameters {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
 enum Mode {
-    UV,
     Value,
     Perlin,
     #[default]
@@ -366,7 +365,6 @@ impl egui_wgpu::CallbackTrait for Parameters {
                 zoom: self.zoom,
                 aspect_ratio: info.viewport.aspect_ratio(),
                 mode: match self.mode {
-                    Mode::UV => 0,
                     Mode::Value => 1,
                     Mode::Perlin => 2,
                     Mode::Simplex => 3,
