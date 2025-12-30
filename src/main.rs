@@ -53,8 +53,8 @@ enum Mode {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
 enum Dim {
-    #[default]
     D2,
+    #[default]
     D3,
 }
 
