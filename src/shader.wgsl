@@ -154,10 +154,6 @@ fn k(t: f32) -> f32 {
 }
 
 fn rand(v: vec2<f32>) -> f32 {
-    return randi(vec2<i32>(v));
-}
-
-fn randi(v: vec2<i32>) -> f32 {
     let x = bitcast<u32>(v.x);
     let y = bitcast<u32>(v.y);
 
