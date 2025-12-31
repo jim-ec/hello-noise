@@ -652,10 +652,8 @@ fn rand2(v: vec2<f32>) -> f32 {
 }
 
 fn rand3(v: vec3<f32>) -> f32 {
-    let x = bitcast<u32>(v.x);
-    let y = bitcast<u32>(v.y);
-    let z = bitcast<u32>(v.z);
-    let seed = x ^ (y * 0x9E3779B9u) ^ (z * 0x1B873593u);
+    let b = bitcast<vec3<u32>>(vec3<i32>(v));
+    let seed = b.x ^ (b.y * 0x9E3779B9u) ^ (b.z * 0x1B873593u);
     let hash = hash_murmur(seed);
     return u32_to_unit_f32(hash) * 2.0 - 1.0;
 }
