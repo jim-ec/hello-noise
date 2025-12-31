@@ -365,18 +365,17 @@ impl eframe::App for MyApp {
 
                         ui.horizontal(|ui| {
                             ui.label("Zoom");
-                            ui.add(egui::DragValue::new(&mut self.parameters.zoom).speed(0.01));
+                            key_ui(ui, "Q");
+                            key_ui(ui, "E");
                             ui.label(format!("(x{:.2e})", self.parameters.zoom.exp()));
                         });
 
                         ui.horizontal(|ui| {
                             ui.label("Pan");
-                            ui.add(
-                                egui::DragValue::new(&mut self.parameters.panning[0]).speed(0.01),
-                            );
-                            ui.add(
-                                egui::DragValue::new(&mut self.parameters.panning[1]).speed(0.01),
-                            );
+                            key_ui(ui, "W");
+                            key_ui(ui, "A");
+                            key_ui(ui, "S");
+                            key_ui(ui, "D");
                         });
 
                         if let Some(render_state) = frame.wgpu_render_state() {
@@ -387,6 +386,21 @@ impl eframe::App for MyApp {
                     })
             });
     }
+}
+
+fn key_ui(ui: &mut egui::Ui, label: &str) {
+    egui::Frame::NONE
+        .stroke(ui.style().visuals.window_stroke)
+        .corner_radius(2.0)
+        .inner_margin(2.0)
+        .show(ui, |ui| {
+            let size = ui.text_style_height(&egui::TextStyle::Body);
+            ui.set_min_size(egui::vec2(size, size));
+            ui.set_max_size(egui::vec2(size, size));
+            ui.centered_and_justified(|ui| {
+                ui.label(label);
+            });
+        });
 }
 
 #[derive(Debug, Copy, Clone)]
