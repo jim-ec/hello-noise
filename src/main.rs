@@ -36,6 +36,7 @@ fn main() -> eframe::Result {
 #[derive(Debug, Clone, Copy)]
 struct Parameters {
     mode: Mode,
+    output: Output,
     zoom: f32,
     panning: Vec2,
     time: f32,
@@ -50,14 +51,21 @@ struct Parameters {
     dither: bool,
     levels: u32,
     saturation: f32,
-    gradient: bool,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
+enum Output {
+    F,
+    Df,
+    #[default]
+    Split,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
 enum Mode {
+    #[default]
     Value,
     Perlin,
-    #[default]
     Simplex,
     Worley,
 }
@@ -126,6 +134,7 @@ impl MyApp {
         Self {
             parameters: Parameters {
                 mode: Mode::default(),
+                output: Output::default(),
                 zoom: 2.0,
                 panning: Vec2::ZERO,
                 time: 0.0,
@@ -140,7 +149,6 @@ impl MyApp {
                 levels: 16,
                 saturation: 1.0,
                 dither: false,
-                gradient: true,
             },
         }
     }
@@ -206,8 +214,6 @@ impl eframe::App for MyApp {
                         });
 
                         ui.horizontal(|ui| {
-                            ui.label("Dim");
-
                             for dim in all::<Dim>() {
                                 if ui
                                     .selectable_label(
@@ -223,11 +229,22 @@ impl eframe::App for MyApp {
                                 }
                             }
 
-                            if ui
-                                .selectable_label(self.parameters.gradient, "Gradient")
-                                .clicked()
-                            {
-                                self.parameters.gradient ^= true;
+                            ui.separator();
+
+                            for output in all::<Output>() {
+                                if ui
+                                    .selectable_label(
+                                        self.parameters.output == output,
+                                        match output {
+                                            Output::F => "f",
+                                            Output::Df => "∂f",
+                                            Output::Split => "f/∂f",
+                                        },
+                                    )
+                                    .clicked()
+                                {
+                                    self.parameters.output = output;
+                                }
                             }
                         });
 
@@ -352,7 +369,7 @@ pub struct PushConstants {
     levels: u32,
     saturation: f32,
     dither: u32,
-    gradient: u32,
+    output: u32,
 }
 
 impl egui_wgpu::CallbackTrait for Parameters {
@@ -392,7 +409,7 @@ impl egui_wgpu::CallbackTrait for Parameters {
                 levels: if self.quantize { self.levels } else { 0 },
                 saturation: self.saturation,
                 dither: self.dither as u32,
-                gradient: self.gradient as u32,
+                output: self.output as u32,
             }]),
         );
         pass.draw(0..3, 0..1);
