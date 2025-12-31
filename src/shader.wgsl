@@ -10,6 +10,7 @@ struct Parameters {
     octaves: u32,
     lacunarity: f32,
     persistence: f32,
+    sliding: f32,
     levels: u32,
     saturation: f32,
     dither: u32,
@@ -172,7 +173,7 @@ fn fbm(p: vec3<f32>) -> Noise {
     var q = p;
 
     for (var i = 0u; i < parameters.octaves; i++) {
-        let n = noise(q);
+        let n = noise(q + f32(i) * parameters.sliding * parameters.time * rand_vec3(vec3(f32(i))));
         out.f += amplitude * n.f;
         out.df += amplitude * frequency * n.df;
         q *= parameters.lacunarity;

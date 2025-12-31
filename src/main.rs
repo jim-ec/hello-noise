@@ -45,6 +45,7 @@ struct Parameters {
     warp_strength: f32,
     octaves: u32,
     lacunarity: f32,
+    sliding: f32,
     persistence: f32,
     time_scale: f32,
     quantize: bool,
@@ -144,6 +145,7 @@ impl MyApp {
                 octaves: 1,
                 lacunarity: 2.0,
                 persistence: 0.5,
+                sliding: 1.0,
                 time_scale: 1.0,
                 quantize: false,
                 levels: 16,
@@ -287,6 +289,15 @@ impl eframe::App for MyApp {
                         });
 
                         ui.horizontal(|ui| {
+                            ui.label("Sliding");
+                            ui.add(
+                                egui::DragValue::new(&mut self.parameters.sliding)
+                                    .speed(0.05)
+                                    .range(0.0..=16.0),
+                            );
+                        });
+
+                        ui.horizontal(|ui| {
                             ui.label("Warp");
                             ui.add(egui::DragValue::new(&mut self.parameters.warps).speed(0.05));
                             ui.label("Strength");
@@ -366,6 +377,7 @@ pub struct PushConstants {
     octaves: u32,
     lacunarity: f32,
     persistence: f32,
+    sliding: f32,
     levels: u32,
     saturation: f32,
     dither: u32,
@@ -406,6 +418,7 @@ impl egui_wgpu::CallbackTrait for Parameters {
                 octaves: self.octaves,
                 lacunarity: self.lacunarity,
                 persistence: self.persistence,
+                sliding: self.sliding,
                 levels: if self.quantize { self.levels } else { 0 },
                 saturation: self.saturation,
                 dither: self.dither as u32,
