@@ -69,20 +69,17 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;
     let noise = warp_noise(embed(uv));
 
-    var color = select(
-        vec3(noise.f) * 0.5 + 0.5,
-        vec3(normalize(noise.df) * 0.5 + 0.5),
-        vec3<bool>(select(
-            bool(uniforms.output) && in.uv_screen_space.x + -0.2 * in.uv_screen_space.y < 0.0,
-            bool(uniforms.output),
-            uniforms.output != OUTPUT_SPLIT
-        )),
+    let output_gradient = select(
+        bool(uniforms.output) && in.uv_screen_space.x + -0.2 * in.uv_screen_space.y < 0.0,
+        bool(uniforms.output),
+        uniforms.output != OUTPUT_SPLIT
     );
 
-    color = quantize_color(color, in.position.xy);
-    color = saturate_color(color);
-    color = saturate(color);
 
+    var color = select(vec3(noise.f), vec3(normalize(noise.df)), output_gradient) * 0.5 + 0.5;
+    color = quantize_color(color, in.position.xy);
+    color = select(saturate_color(color), color, output_gradient);
+    color = saturate(color);
     return vec4(pow(color, vec3(2.2)), 1.0);
 }
 
