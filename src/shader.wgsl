@@ -1,4 +1,4 @@
-struct Parameters {
+struct Uniforms {
     panning: vec2<f32>,
     aspect_ratio: f32,
     time: f32,
@@ -17,7 +17,7 @@ struct Parameters {
     output: u32,
 }
 
-var<push_constant> parameters: Parameters;
+var<push_constant> uniforms: Uniforms;
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
@@ -54,7 +54,7 @@ fn vertex(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
     let id = (vec2(0x2u, 0x1u) >> vec2(vertex_index)) & vec2(1u); // [0, 1]^2
     let uv = vec2<i32>(id << vec2(2u)) - 1; // [-1, 3]^2
     var out: VertexOutput;
-    out.uv = vec2<f32>(parameters.panning + exp(parameters.zoom) * (vec2<f32>(uv))) * vec2(parameters.aspect_ratio, 1.0);
+    out.uv = vec2<f32>(uniforms.panning + exp(uniforms.zoom) * (vec2<f32>(uv))) * vec2(uniforms.aspect_ratio, 1.0);
     out.uv_screen_space = vec2<f32>(uv);
     out.position = vec4(vec2<f32>(uv), 0.0, 1.0);
     return out;
@@ -69,9 +69,9 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         vec3(noise.f) * 0.5 + 0.5,
         vec3(normalize(noise.df) * 0.5 + 0.5),
         vec3<bool>(select(
-            bool(parameters.output) && in.uv_screen_space.x + -0.2 * in.uv_screen_space.y < 0.0,
-            bool(parameters.output),
-            parameters.output != OUTPUT_SPLIT
+            bool(uniforms.output) && in.uv_screen_space.x + -0.2 * in.uv_screen_space.y < 0.0,
+            bool(uniforms.output),
+            uniforms.output != OUTPUT_SPLIT
         )),
     );
 
@@ -82,29 +82,29 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 }
 
 fn quantize_color(color: vec3<f32>, screen_space_position: vec2<f32>) -> vec3<f32> {
-    let step_size = 1.0 / f32(parameters.levels);
+    let step_size = 1.0 / f32(uniforms.levels);
     let dither_noise = rand2(screen_space_position) - 0.5;
-    var dither = select(vec3(0.0), vec3(dither_noise * step_size), vec3<bool>(parameters.dither));
+    var dither = select(vec3(0.0), vec3(dither_noise * step_size), vec3<bool>(uniforms.dither));
     return select(
         color,
-        trunc((color + dither) * f32(parameters.levels)) / f32(parameters.levels),
-        parameters.levels > 0,
+        trunc((color + dither) * f32(uniforms.levels)) / f32(uniforms.levels),
+        uniforms.levels > 0,
     );
 }
 
 fn saturate_color(color: vec3<f32>) -> vec3<f32> {
-    let k = parameters.saturation;
+    let k = uniforms.saturation;
     let lower = 0.5 * pow(2.0 * color, vec3(k));
     let upper = 1.0 - 0.5 * pow(2.0 * (1.0 - color), vec3(k));
     return select(upper, lower, color < vec3(0.5));
 }
 
 fn embed(p: vec2<f32>) -> vec3<f32> {
-    if (parameters.dim == 2) {
+    if (uniforms.dim == 2) {
         return vec3(p, 0.0);
     }
-    else if (parameters.dim == 3) {
-        return vec3(p, parameters.time);
+    else if (uniforms.dim == 3) {
+        return vec3(p, uniforms.time);
     }
     else {
         return vec3();
@@ -112,7 +112,7 @@ fn embed(p: vec2<f32>) -> vec3<f32> {
 }
 
 fn warp_noise(p: vec3<f32>) -> Noise {
-    let s = parameters.warp_strength;
+    let s = uniforms.warp_strength;
     let I = mat3x3<f32>(
         vec3(1.0, 0.0, 0.0),
         vec3(0.0, 1.0, 0.0),
@@ -126,7 +126,7 @@ fn warp_noise(p: vec3<f32>) -> Noise {
     // Initially zero because u is constant (0,0)
     var Ju = mat3x3<f32>(vec3(0.0), vec3(0.0), vec3(0.0));
 
-    for (var i = 0u; i < parameters.warp; i++) {
+    for (var i = 0u; i < uniforms.warp; i++) {
         // Current coordinate `q`
         let q = p + s * u;
 
@@ -172,23 +172,23 @@ fn fbm(p: vec3<f32>) -> Noise {
 
     var q = p;
 
-    for (var i = 0u; i < parameters.octaves; i++) {
-        let n = noise(q + f32(i) * parameters.sliding * parameters.time * rand_vec3(vec3(f32(i))));
+    for (var i = 0u; i < uniforms.octaves; i++) {
+        let n = noise(q + f32(i) * uniforms.sliding * uniforms.time * rand_vec3(vec3(f32(i))));
         out.f += amplitude * n.f;
         out.df += amplitude * frequency * n.df;
-        q *= parameters.lacunarity;
-        amplitude *= parameters.persistence;
-        frequency *= parameters.lacunarity;
+        q *= uniforms.lacunarity;
+        amplitude *= uniforms.persistence;
+        frequency *= uniforms.lacunarity;
     }
 
     return out;
 }
 
 fn noise(p: vec3<f32>) -> Noise {
-    if (parameters.dim == 2) {
+    if (uniforms.dim == 2) {
         return noise_2d(p.xy);
     }
-    else if (parameters.dim == 3) {
+    else if (uniforms.dim == 3) {
         return noise_3d(p);
     }
     else {
@@ -197,16 +197,16 @@ fn noise(p: vec3<f32>) -> Noise {
 }
 
 fn noise_2d(p: vec2<f32>) -> Noise {
-    if (MODE_VALUE == parameters.mode) {
+    if (MODE_VALUE == uniforms.mode) {
         return value_noise_2d(p);
     }
-    else if (MODE_PERLIN == parameters.mode) {
+    else if (MODE_PERLIN == uniforms.mode) {
         return perlin_noise_2d(p);
     }
-    else if (MODE_SIMPLEX == parameters.mode) {
+    else if (MODE_SIMPLEX == uniforms.mode) {
         return simplex_noise_2d(p);
     }
-    else if (MODE_WORLEY == parameters.mode) {
+    else if (MODE_WORLEY == uniforms.mode) {
         return worley_noise_2d(p);
     }
     else {
@@ -215,16 +215,16 @@ fn noise_2d(p: vec2<f32>) -> Noise {
 }
 
 fn noise_3d(p: vec3<f32>) -> Noise {
-    if (MODE_VALUE == parameters.mode) {
+    if (MODE_VALUE == uniforms.mode) {
         return value_noise_3d(p);
     }
-    else if (MODE_PERLIN == parameters.mode) {
+    else if (MODE_PERLIN == uniforms.mode) {
         return perlin_noise_3d(p);
     }
-    else if (MODE_SIMPLEX == parameters.mode) {
+    else if (MODE_SIMPLEX == uniforms.mode) {
         return simplex_noise_3d(p);
     }
-    else if (MODE_WORLEY == parameters.mode) {
+    else if (MODE_WORLEY == uniforms.mode) {
         return worley_noise_3d(p);
     }
     else {
