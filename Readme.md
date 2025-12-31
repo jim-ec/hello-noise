@@ -6,8 +6,8 @@ Interactive noise generation with Rust/WGPU.
 - Combinators: **Warping, fBM**
 - Implemented dimensions: **2D, 3D** (display time slice)
 - **Analytical gradient** implementations for all noise functions and combinators
-- XOR and shift based hashing function
-- Cubic and quintic easing functions for Value and Perlin Noise
+- **Murmur** hashing function
+- **Cubic and quintic** easing functions for Value and Perlin Noise
 - Realtime editing of noise parameters
 - Color control: Quantization and dithering
 
