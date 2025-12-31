@@ -65,9 +65,9 @@ enum Output {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
 enum Mode {
-    #[default]
     Value,
     Perlin,
+    #[default]
     Simplex,
     Worley,
 }
@@ -168,6 +168,10 @@ impl MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         ctx.request_repaint();
+
+        if ctx.input(|input| input.key_pressed(Key::Escape)) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
 
         egui::CentralPanel::default()
             .frame(egui::Frame::default().fill(ctx.style().visuals.panel_fill))
