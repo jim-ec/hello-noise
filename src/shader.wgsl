@@ -536,7 +536,7 @@ fn worley_noise_2d(p: vec2<f32>) -> Noise {
 
     var out: Noise;
     out.f = dist * scale_factor;
-    out.df = vec3((-min_diff / dist + EPSILON) * scale_factor, 0.0);
+    out.df = vec3((-min_diff / (dist + EPSILON)) * scale_factor, 0.0);
     return out;
 }
 
@@ -569,7 +569,7 @@ fn worley_noise_3d(p: vec3<f32>) -> Noise {
 
     var out: Noise;
     out.f = dist * scale_factor;
-    out.df = (-min_diff / dist + EPSILON) * scale_factor;
+    out.df = (-min_diff / (dist + EPSILON)) * scale_factor;
     return out;
 }
 
