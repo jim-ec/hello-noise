@@ -15,6 +15,7 @@ struct Uniforms {
     saturation: f32,
     dither: u32,
     output: u32,
+    easing: u32,
 }
 
 var<push_constant> uniforms: Uniforms;
@@ -25,10 +26,13 @@ struct VertexOutput {
     @location(1) uv_screen_space: vec2<f32>,
 }
 
-const MODE_VALUE: u32 = 1;
-const MODE_PERLIN: u32 = 2;
-const MODE_SIMPLEX: u32 = 3;
-const MODE_WORLEY: u32 = 4;
+const MODE_VALUE: u32 = 0;
+const MODE_PERLIN: u32 = 1;
+const MODE_SIMPLEX: u32 = 2;
+const MODE_WORLEY: u32 = 3;
+
+const EASING_CUBIC: u32 = 0;
+const EASING_QUINTIC: u32 = 1;
 
 const OUTPUT_VALUE: u32 = 0;
 const OUTPUT_GRADIENT: u32 = 1;
@@ -586,23 +590,61 @@ fn rand_vec3(p: vec3<f32>) -> vec3<f32> {
 fn k2(t: vec2<f32>) -> vec2<f32> {
     let t2 = t * t;
     let t3 = t * t2;
-    return 3 * t2 - 2 * t3;
+    let t4 = t * t3;
+    let t5 = t * t4;
+
+    if (uniforms.easing == EASING_CUBIC) {
+        return 3 * t2 - 2 * t3;
+    }
+    else if (uniforms.easing == EASING_QUINTIC) {
+        return 6 * t5 - 15 * t4 + 10 * t3;
+    }
+    else {
+        return vec2();
+    }
 }
 
 fn k3(t: vec3<f32>) -> vec3<f32> {
     let t2 = t * t;
     let t3 = t * t2;
-    return 3 * t2 - 2 * t3;
+    let t4 = t * t3;
+    let t5 = t * t4;
+
+    if (uniforms.easing == EASING_CUBIC) {
+        return 3 * t2 - 2 * t3;
+    }
+    else if (uniforms.easing == EASING_QUINTIC) {
+        return 6 * t5 - 15 * t4 + 10 * t3;
+    }
+    else {
+        return vec3();
+    }
 }
 
 fn dkdt2(t: vec2<f32>) -> vec2<f32> {
-    // d/dt (3t^2 - 2t^3) = 6t(1-t)
-    return 6.0 * t * (1.0 - t);
+    let k = (t - 1.0);
+    if (uniforms.easing == EASING_CUBIC) {
+        return 6.0 * t * -k;
+    }
+    else if (uniforms.easing == EASING_QUINTIC) {
+        return 30 * t * t * k * k;
+    }
+    else {
+        return vec2();
+    }
 }
 
 fn dkdt3(t: vec3<f32>) -> vec3<f32> {
-    // d/dt (3t^2 - 2t^3) = 6t(1-t)
-    return 6.0 * t * (1.0 - t);
+    let k = (t - 1.0);
+    if (uniforms.easing == EASING_CUBIC) {
+        return 6.0 * t * -k;
+    }
+    else if (uniforms.easing == EASING_QUINTIC) {
+        return 30 * t * t * k * k;
+    }
+    else {
+        return vec3();
+    }
 }
 
 fn rand2(v: vec2<f32>) -> f32 {

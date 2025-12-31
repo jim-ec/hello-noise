@@ -52,6 +52,7 @@ struct Parameters {
     dither: bool,
     levels: u32,
     saturation: f32,
+    easing: Easing,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
@@ -76,6 +77,13 @@ enum Dim {
     D2,
     #[default]
     D3,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Sequence)]
+enum Easing {
+    Cubic,
+    #[default]
+    Quintic,
 }
 
 #[derive(Debug)]
@@ -151,6 +159,7 @@ impl MyApp {
                 levels: 16,
                 saturation: 1.0,
                 dither: false,
+                easing: Easing::default(),
             },
         }
     }
@@ -246,6 +255,24 @@ impl eframe::App for MyApp {
                                     .clicked()
                                 {
                                     self.parameters.output = output;
+                                }
+                            }
+                        });
+
+                        ui.horizontal(|ui| {
+                            if ![Mode::Value, Mode::Perlin].contains(&self.parameters.mode) {
+                                ui.disable();
+                            }
+
+                            for easing in all::<Easing>() {
+                                if ui
+                                    .selectable_label(
+                                        self.parameters.easing == easing,
+                                        format!("{easing:?}"),
+                                    )
+                                    .clicked()
+                                {
+                                    self.parameters.easing = easing;
                                 }
                             }
                         });
@@ -382,6 +409,7 @@ pub struct PushConstants {
     saturation: f32,
     dither: u32,
     output: u32,
+    easing: u32,
 }
 
 impl egui_wgpu::CallbackTrait for Parameters {
@@ -403,12 +431,7 @@ impl egui_wgpu::CallbackTrait for Parameters {
                 time: self.time,
                 zoom: self.zoom,
                 aspect_ratio: info.viewport.aspect_ratio(),
-                mode: match self.mode {
-                    Mode::Value => 1,
-                    Mode::Perlin => 2,
-                    Mode::Simplex => 3,
-                    Mode::Worley => 4,
-                },
+                mode: self.mode as u32,
                 dim: match self.dim {
                     Dim::D2 => 2,
                     Dim::D3 => 3,
@@ -423,6 +446,7 @@ impl egui_wgpu::CallbackTrait for Parameters {
                 saturation: self.saturation,
                 dither: self.dither as u32,
                 output: self.output as u32,
+                easing: self.easing as u32,
             }]),
         );
         pass.draw(0..3, 0..1);
