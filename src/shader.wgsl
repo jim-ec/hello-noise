@@ -81,6 +81,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     color = quantize_color(color, in.position.xy);
     color = saturate_color(color);
+    color = saturate(color);
 
     return vec4(pow(color, vec3(2.2)), 1.0);
 }
