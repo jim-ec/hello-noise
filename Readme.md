@@ -10,4 +10,4 @@ Interactive noise generation with Rust/WGPU.
 - Realtime editing of noise parameters
 - Color control: Quantization and dithering
 
-![figure](figure.png)
+![figure](figure.jpg)
