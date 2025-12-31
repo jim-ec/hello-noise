@@ -238,19 +238,16 @@ fn value_noise_2d(p: vec2<f32>) -> Noise {
     let n01 = rand2(i + vec2(0, 1));
     let n11 = rand2(i + vec2(1, 1));
 
-    let u = k(f.x);
-    let v = k(f.y);
+    let k = k2(f);
+    let dk = dkdt2(f);
 
-    // df/dt 3t^2 - 2t^3 is 6t - 6t^2 = 6t(1-t)
-    let df = 6.0 * f * (1.0 - f);
-
-    let nx0 = mix(n00, n10, u);
-    let nx1 = mix(n01, n11, u);
+    let nx0 = mix(n00, n10, k.x);
+    let nx1 = mix(n01, n11, k.x);
 
     var out: Noise;
-    out.f = mix(nx0, nx1, v);
-    out.df.x = mix(n10 - n00, n11 - n01, v) * df.x;
-    out.df.y = mix(n01 - n00, n11 - n10, u) * df.y;
+    out.f = mix(nx0, nx1, k.y);
+    out.df.x = mix(n10 - n00, n11 - n01, k.y) * dk.x;
+    out.df.y = mix(n01 - n00, n11 - n10, k.x) * dk.y;
     return out;
 }
 
@@ -258,15 +255,7 @@ fn value_noise_3d(p: vec3<f32>) -> Noise {
     let i = floor(p);
     let f = fract(p);
 
-    let u = k(f.x);
-    let v = k(f.y);
-    let w = k(f.z);
-
-    // Derivatives of the easing function
-    // d/dt (3t^2 - 2t^3) = 6t(1-t)
-    let du = 6.0 * f.x * (1.0 - f.x);
-    let dv = 6.0 * f.y * (1.0 - f.y);
-    let dw = 6.0 * f.z * (1.0 - f.z);
+    let k = k3(f);
 
     let n000 = rand3(i + vec3(0.0, 0.0, 0.0));
     let n100 = rand3(i + vec3(1.0, 0.0, 0.0));
@@ -277,13 +266,13 @@ fn value_noise_3d(p: vec3<f32>) -> Noise {
     let n011 = rand3(i + vec3(0.0, 1.0, 1.0));
     let n111 = rand3(i + vec3(1.0, 1.0, 1.0));
 
-    let nx00 = mix(n000, n100, u);
-    let nx10 = mix(n010, n110, u);
-    let nx01 = mix(n001, n101, u);
-    let nx11 = mix(n011, n111, u);
-    let nxy0 = mix(nx00, nx10, v);
-    let nxy1 = mix(nx01, nx11, v);
-    let nxyz = mix(nxy0, nxy1, w);
+    let nx00 = mix(n000, n100, k.x);
+    let nx10 = mix(n010, n110, k.x);
+    let nx01 = mix(n001, n101, k.x);
+    let nx11 = mix(n011, n111, k.x);
+    let nxy0 = mix(nx00, nx10, k.y);
+    let nxy1 = mix(nx01, nx11, k.y);
+    let nxyz = mix(nxy0, nxy1, k.z);
 
     var out: Noise;
     out.f = nxyz;
@@ -291,22 +280,24 @@ fn value_noise_3d(p: vec3<f32>) -> Noise {
     let dx = mix(
         vec2(n100 - n000, n101 - n001),
         vec2(n110 - n010, n111 - n011),
-        v
+        k.y
     );
     let dy = mix(
         vec2(n010 - n000, n011 - n001),
         vec2(n110 - n100, n111 - n101),
-        u
+        k.x
     );
     let dz = mix(
         vec2(n001 - n000, n011 - n010),
         vec2(n101 - n100, n111 - n110),
-        u
+        k.x
     );
 
-    out.df.x = mix(dx.x, dx.y, w) * du;
-    out.df.y = mix(dy.x, dy.y, w) * dv;
-    out.df.z = mix(dz.x, dz.y, v) * dw;
+    out.df = dkdt3(f) * mix(
+        vec3(dx.x, dy.x, dz.x),
+        vec3(dx.y, dy.y, dz.y),
+        vec3(k.z, k.z, k.y),
+    );
 
     return out;
 }
@@ -325,12 +316,24 @@ fn perlin_noise_2d(p: vec2<f32>) -> Noise {
     let n10 = dot(g10, f - vec2(1, 0));
     let n11 = dot(g11, f - vec2(1, 1));
 
-    let nx0 = mix(n00, n10, k(f.x));
-    let nx1 = mix(n01, n11, k(f.x));
-    let nxy = mix(nx0, nx1, k(f.y));
+    let k = k2(f);
+
+    let nx0 = mix(n00, n10, k.x);
+    let nx1 = mix(n01, n11, k.x);
+    let nxy = mix(nx0, nx1, k.y);
+
+    // Gradient:
+    // Linearly interpolate the random vectors themselves
+    // This represents the direction of the flow coming from the corners
+    let g_avg = mix(mix(g00, g10, k.x), mix(g01, g11, k.x), k.y);
+
+    // Add the contribution from the curve slopes
+    // The change in value due to the easing function sliding between values
+    let slope = dkdt2(f) * vec2(mix(n10 - n00, n11 - n01, k.y), (nx1 - nx0));
 
     var out: Noise;
     out.f = nxy;
+    out.df = vec3(g_avg + slope, 0.0);
     return out;
 }
 
@@ -356,17 +359,15 @@ fn perlin_noise_3d(p: vec3<f32>) -> Noise {
     let n011 = dot(g011, f - vec3(0.0, 1.0, 1.0));
     let n111 = dot(g111, f - vec3(1.0, 1.0, 1.0));
 
-    let u = k(f.x);
-    let v = k(f.y);
-    let w = k(f.z);
+    let k = k3(f);
 
-    let nx00 = mix(n000, n100, u);
-    let nx10 = mix(n010, n110, u);
-    let nx01 = mix(n001, n101, u);
-    let nx11 = mix(n011, n111, u);
-    let nxy0 = mix(nx00, nx10, v);
-    let nxy1 = mix(nx01, nx11, v);
-    let nxyz = mix(nxy0, nxy1, w);
+    let nx00 = mix(n000, n100, k.x);
+    let nx10 = mix(n010, n110, k.x);
+    let nx01 = mix(n001, n101, k.x);
+    let nx11 = mix(n011, n111, k.x);
+    let nxy0 = mix(nx00, nx10, k.y);
+    let nxy1 = mix(nx01, nx11, k.y);
+    let nxyz = mix(nxy0, nxy1, k.z);
 
     var out: Noise;
     out.f = nxyz;
@@ -543,14 +544,26 @@ fn rand_vec3(p: vec3<f32>) -> vec3<f32> {
     return normalize(vec3(x, y, z));
 }
 
-fn k(t: f32) -> f32 {
+fn k2(t: vec2<f32>) -> vec2<f32> {
     let t2 = t * t;
     let t3 = t * t2;
-    let t4 = t * t2;
-    let t5 = t * t2;
-
-    // return 6 * t5 - 15 * t4 + 10 * t3;
     return 3 * t2 - 2 * t3;
+}
+
+fn k3(t: vec3<f32>) -> vec3<f32> {
+    let t2 = t * t;
+    let t3 = t * t2;
+    return 3 * t2 - 2 * t3;
+}
+
+fn dkdt2(t: vec2<f32>) -> vec2<f32> {
+    // d/dt (3t^2 - 2t^3) = 6t(1-t)
+    return 6.0 * t * (1.0 - t);
+}
+
+fn dkdt3(t: vec3<f32>) -> vec3<f32> {
+    // d/dt (3t^2 - 2t^3) = 6t(1-t)
+    return 6.0 * t * (1.0 - t);
 }
 
 fn rand2(v: vec2<f32>) -> f32 {
