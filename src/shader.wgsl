@@ -317,6 +317,7 @@ fn perlin_noise_2d(p: vec2<f32>) -> Noise {
     let n11 = dot(g11, f - vec2(1, 1));
 
     let k = k2(f);
+    let dk = dkdt2(f);
 
     let nx0 = mix(n00, n10, k.x);
     let nx1 = mix(n01, n11, k.x);
@@ -329,11 +330,12 @@ fn perlin_noise_2d(p: vec2<f32>) -> Noise {
 
     // Add the contribution from the curve slopes
     // The change in value due to the easing function sliding between values
-    let slope = dkdt2(f) * vec2(mix(n10 - n00, n11 - n01, k.y), (nx1 - nx0));
+    let slope_x = dk.x * mix(n10 - n00, n11 - n01, k.y);
+    let slope_y = dk.y * (nx1 - nx0);
 
     var out: Noise;
     out.f = nxy;
-    out.df = vec3(g_avg + slope, 0.0);
+    out.df = vec3(g_avg + vec2(slope_x, slope_y), 0.0);
     return out;
 }
 
@@ -360,6 +362,7 @@ fn perlin_noise_3d(p: vec3<f32>) -> Noise {
     let n111 = dot(g111, f - vec3(1.0, 1.0, 1.0));
 
     let k = k3(f);
+    let dk = dkdt3(f);
 
     let nx00 = mix(n000, n100, k.x);
     let nx10 = mix(n010, n110, k.x);
@@ -369,8 +372,23 @@ fn perlin_noise_3d(p: vec3<f32>) -> Noise {
     let nxy1 = mix(nx01, nx11, k.y);
     let nxyz = mix(nxy0, nxy1, k.z);
 
+    let gx00 = mix(g000, g100, k.x);
+    let gx10 = mix(g010, g110, k.x);
+    let gx01 = mix(g001, g101, k.x);
+    let gx11 = mix(g011, g111, k.x);
+    let gxy0 = mix(gx00, gx10, k.y);
+    let gxy1 = mix(gx01, gx11, k.y);
+    let g_avg = mix(gxy0, gxy1, k.z);
+
+    let diff_x_z0 = mix(n100 - n000, n110 - n010, k.y);
+    let diff_x_z1 = mix(n101 - n001, n111 - n011, k.y);
+    let slope_x = mix(diff_x_z0, diff_x_z1, k.z) * dk.x;
+    let slope_y = mix(nx10 - nx00, nx11 - nx01, k.z) * dk.y;
+    let slope_z = (nxy1 - nxy0) * dk.z;
+
     var out: Noise;
     out.f = nxyz;
+    out.df = g_avg + vec3(slope_x, slope_y, slope_z);
     return out;
 }
 
