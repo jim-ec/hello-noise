@@ -35,6 +35,8 @@ const OUTPUT_SPLIT: u32 = 2;
 
 const TAU: f32 = 6.2831853072;
 
+const EPSILON: f32 = 1e-5;
+
 struct Noise {
     f: f32,
     df: vec3<f32>,
@@ -506,8 +508,9 @@ fn worley_noise_2d(p: vec2<f32>) -> Noise {
     let i = floor(p);
     let f = fract(p);
 
-    let d_max = 2.0;
-    var d_min = d_max;
+    let d_max_sq = 2.0;
+    var d_min_sq = d_max_sq;
+    var min_diff = vec2(0.0);
 
     for (var y = -1; y <= 1; y++) {
         for (var x = -1; x <= 1; x++) {
@@ -515,12 +518,20 @@ fn worley_noise_2d(p: vec2<f32>) -> Noise {
             let cell_id = i + neighbor;
             let point_local = rand_vec2(cell_id) * 0.5 + 0.5;
             let diff = neighbor + point_local - f;
-            d_min = min(d_min, dot(diff, diff));
+            let d_sq = dot(diff, diff);
+            if (d_sq < d_min_sq) {
+                d_min_sq = d_sq;
+                min_diff = diff;
+            }
         }
     }
 
+    let dist = sqrt(d_min_sq);
+    let scale_factor = 1.0 / sqrt(d_max_sq);
+
     var out: Noise;
-    out.f = sqrt(d_min) / sqrt(d_max);
+    out.f = dist * scale_factor;
+    out.df = vec3((-min_diff / dist + EPSILON) * scale_factor, 0.0);
     return out;
 }
 
@@ -528,8 +539,9 @@ fn worley_noise_3d(p: vec3<f32>) -> Noise {
     let i = floor(p);
     let f = fract(p);
 
-    let d_max = 3.0;
-    var d_min = d_max;
+    let d_max_sq = 3.0;
+    var d_min_sq = d_max_sq;
+    var min_diff = vec3(0.0);
 
     for (var z = -1; z <= 1; z++) {
         for (var y = -1; y <= 1; y++) {
@@ -538,13 +550,21 @@ fn worley_noise_3d(p: vec3<f32>) -> Noise {
                 let cell_id = i + neighbor;
                 let point_local = rand_vec3(cell_id) * 0.5 + 0.5;
                 let diff = neighbor + point_local - f;
-                d_min = min(d_min, dot(diff, diff));
+                let d_sq = dot(diff, diff);
+                if (d_sq < d_min_sq) {
+                    d_min_sq = d_sq;
+                    min_diff = diff;
+                }
             }
         }
     }
 
+    let dist = sqrt(d_min_sq);
+    let scale_factor = 1.0 / sqrt(d_max_sq);
+
     var out: Noise;
-    out.f = sqrt(d_min) / sqrt(d_max);
+    out.f = dist * scale_factor;
+    out.df = (-min_diff / dist + EPSILON) * scale_factor;
     return out;
 }
 
