@@ -403,9 +403,10 @@ fn simplex_noise_2d(p: vec2<f32>) -> Noise {
         dot(g2, f2),
     );
 
+    const NORMALIZATION_FACTOR = 70.0;
     var out: Noise;
 
-    out.f = 70.0 * dot(m4, grad_dots);
+    out.f = NORMALIZATION_FACTOR * dot(m4, grad_dots);
 
     // gradient = m^4 * g - 8 * m^3 * (g . f) * f
 
@@ -416,7 +417,7 @@ fn simplex_noise_2d(p: vec2<f32>) -> Noise {
     let t2_factors = 8.0 * m3 * grad_dots;
     let term2 = t2_factors.x * f0 + t2_factors.y * f1 + t2_factors.z * f2;
 
-    out.df = vec3(vec2(70.0 * (term1 - term2)), 0.0);
+    out.df = vec3(vec2(NORMALIZATION_FACTOR * (term1 - term2)), 0.0);
 
     return out;
 }
@@ -454,7 +455,8 @@ fn simplex_noise_3d(p: vec3<f32>) -> Noise {
     let m = max(vec4(0.0), 0.5 - r);
 
     let m2 = m * m;
-    let m4 = m2 * m2;
+    let m3 = m2 * m;
+    let m4 = m3 * m;
 
     let grad_dots = vec4(
         dot(g0, f0),
@@ -463,10 +465,21 @@ fn simplex_noise_3d(p: vec3<f32>) -> Noise {
         dot(g3, f3)
     );
 
-    let n = dot(m4, grad_dots);
-
+    const NORMALIZATION_FACTOR = 32.0;
     var out: Noise;
-    out.f = 32.0 * n;
+
+    out.f = NORMALIZATION_FACTOR * dot(m4, grad_dots);
+
+    // Gradient: m^4 * g - 8 * m^3 * (g . f) * f
+    // Term 1: m^4 * g (Linear contribution)
+    let term1 = m4.x * g0 + m4.y * g1 + m4.z * g2 + m4.w * g3;
+
+    // Term 2: 8 * m^3 * (g . f) * f (Radial falloff contribution)
+    let t2_factors = 8.0 * m3 * grad_dots;
+    let term2 = t2_factors.x * f0 + t2_factors.y * f1 + t2_factors.z * f2 + t2_factors.w * f3;
+
+    out.df = NORMALIZATION_FACTOR * (term1 - term2);
+
     return out;
 }
 
